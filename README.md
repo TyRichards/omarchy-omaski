@@ -1,8 +1,9 @@
 # Omarski
 
 A skiing game for Omarchy in the spirit of the 1991 classic SkiFree, rebuilt
-to run natively on Hyprland — with **all-original artwork**, so the whole
-plugin is freely redistributable.
+to run natively on Hyprland — with **all-original artwork** in a chunky,
+minimalist fantasy-console style, so the whole plugin is freely
+redistributable.
 
 Click the skier in the bar and the game opens as a true 1:1 square window, in
 exactly the position and at exactly the size Omarchy's *single-window square
@@ -11,19 +12,33 @@ aspect ratio* layout would give it.
 No Wine. No browser. No emulator. No network. Just Quickshell and QML.
 
 ```
-Time:  0:00:44.25
-Dist:      551m
-Speed:    15m/s
-Style:      282
+TIME 0:00:44.25
+DIST   551M
+SPEED  15M/S
+STYLE   282
 ```
+
+## The look: a tiny screen, blown up
+
+Everything renders onto a small virtual screen of roughly 220 logical pixels
+— drawn with the 16-colour PICO-8 palette and a 3x5 pixel font — then
+integer-scales up to the window with no filtering. Big square pixels, warm
+paper-white snow, flat colours.
+
+That virtual screen is also why the game is smooth. The whole frame is
+painted onto **one canvas at a fixed 30 fps**; nothing in the scene graph is
+created or destroyed while you ski. (Version 2 rebuilt a list of QML image
+objects on every tick, which is why its trees teleported instead of scrolling.
+Version 3 repaints one item.)
 
 ## The artwork is original — and yours to redistribute
 
 Every one of the **89 sprites** in `assets/sprites/` — the skier, the trees,
-the rainbow ramp, the chairlift, the dog, the snowboarders, the OUCH!
-starburst and all fourteen frames of the Abominable Snow Monster — was drawn
-for this project. The pixel grids live in `tools/make-sprites.py` (pure
-Python standard library), which renders the whole set:
+the rainbow ramp, the chairlift, the dog, the snowboarders, the OW! starburst
+and all fourteen frames of the Abominable Snow Monster — was drawn for this
+project, at 8 pixels per metre. The pixel grids live in
+`tools/make-sprites.py` (pure Python standard library), which renders the
+whole set:
 
 ```bash
 python3 tools/make-sprites.py     # regenerate assets/sprites/
@@ -36,28 +51,28 @@ downloads.
 
 ## Faithfulness
 
-The simulation follows the rules of the classic as documented by its author:
+The simulation is a from-scratch implementation of the classic's rules:
 
 | Classic behaviour | In Omarski |
 |---|---|
-| 16 pixels per metre | `PIXELS_PER_METRE = 16` |
 | World wraps at ±2048 m in every direction | `WORLD_LIMIT = 2048`, wrapped on both axes |
+| Momentum | You push off from a standstill, build to 15 m/s, and a crash costs all of it |
+| Seven discrete headings | Straight down, three grades each way |
+| Skis fully sideways = stop | Hard side is a dead stop: you skid to 0 m/s and stay put |
+| Turning scrubs speed | Edging across the fall line brakes much faster than gravity builds |
 | `F` doubles the game speed | `FAST_MULTIPLIER = 2.0` |
 | The monster appears after 2000 m | `YETI_DISTANCE = 2000` |
-| He cannot be outrun at normal speed | He is slightly faster than a tucked skier, and only `F` escapes |
+| He cannot be outrun at normal speed | 16.5 m/s beats a 15 m/s tuck; only `F` escapes |
 | He cannot grab you in mid-air | Collision is skipped while airborne |
-| Seven discrete headings | Straight down plus three each way, using mirrored sprite pairs |
+| Escape him and he returns | Outrun him by 60 m and he gives up — until 2000 m later |
 | Three courses off the start | Slalom, Free-style, Tree Slalom, chosen by which sign you pass |
 | Slalom gates score you | A smiling marker for a cleared gate, a scowling one for a miss |
 | Start and Finish banners | Drawn at each end of a course, with a result panel at the finish |
 | Trees, rocks, stumps, moguls, ramps | All present, with the ramp giving the biggest air |
+| Jumps carry your line | Air velocity is frozen at the lip; steering mid-air works a backflip |
 | Dogs, snowboarders, other skiers | Wander the hill and knock you down on contact |
 | Status box: Time / Dist / Speed / Style | Same four rows, `0:01:36.54` and `  723m` formats |
 | Deterministic hill | Hashed per-cell placement, so the slope is identical every run |
-
-The mirrored sprite pairs are exact by construction: the generator flips each
-right-hand pose to produce its left-hand twin, so the turn arc uses seven
-bitmaps just as the classic did.
 
 ## Controls
 
@@ -98,22 +113,23 @@ Two details worth knowing, both learned the hard way:
   ever gets tiled.
 * Omarchy tags every window `default-opacity` and then applies `0.985 0.96` to
   whatever still carries the tag, so `opaque = true` alone is not enough — the
-  later opacity rule wins and the snow comes out grey. Omarski drops the tag as
-  well, which is the documented opt-out, and the snowfield renders pure white.
+  later opacity rule wins and the snow goes muddy. Omarski drops the tag as
+  well, which is the documented opt-out, and the snowfield renders solid.
 
 ## Tests
 
 The simulation is plain JavaScript, so it runs headless under node. The suite
-covers downhill progress, crash recovery, jump and backflip scoring, world
-wrapping, field determinism, course selection, status formatting, the sprite
-catalog, and both halves of the monster rule — that he eats you at normal
-speed and that `F` gets you away.
+covers momentum (push-off, top speed, the dead stop at full sideways, crashes
+zeroing it), crash recovery, jump and backflip scoring, world wrapping, field
+determinism, course selection, status formatting, the sprite catalog, and
+both halves of the monster rule — that he eats you at normal speed and that
+`F` gets you away.
 
 ```bash
 node test/test-run.mjs
 ```
 
-59 checks, including a full played slalom run that steers gate to gate and
+64 checks, including a full played slalom run that steers gate to gate and
 asserts every one of the 27 gates is judged and the finish is reached.
 
 There is also a debug hook for exercising the late game without skiing two
@@ -148,6 +164,9 @@ omarchy shell omarski launch
 Omarski is a from-scratch homage to **SkiFree**, written by Chris Pirih in
 1991\. He still hosts the original, for free, at <https://ski.ihoc.net/> — go
 play it, read the story of how it came to be, and buy the man a T-shirt.
+
+The presentation tips its hat to the fantasy-console scene — PICO-8 and the
+tiny games made for it — while every asset here is drawn from scratch.
 
 This plugin shares no code or artwork with SkiFree and is not affiliated with
 or endorsed by Chris Pirih or Microsoft. What it borrows is the *idea* — the

@@ -53,11 +53,15 @@ function check(name, cond, detail = '') {
     ev.length = 0;
     s.fast = true;
     s.heading = 0;
+    // This test measures momentum, not collision: skiing blind at 30 m/s
+    // would crash constantly and reset the speed being measured, so keep
+    // the obstacle grace topped up for the whole run.
+    s.graceTimer = 1;
     Engine.step(s, dt, ev);
   }
   const gap = s.yeti ? Math.abs(Engine.wrap(s.y - s.yeti.y)) : 0;
   check('fast mode survives the yeti', !s.eaten, `gap=${gap.toFixed(1)}m`);
-  check('fast mode doubles speed',
+  check('fast mode doubles top speed',
         Math.abs(s.speed - Engine.SPEED_BY_HEADING[0] * 2) < 0.01, `${s.speed}m/s`);
 }
 
@@ -73,6 +77,38 @@ function check(name, cond, detail = '') {
   check('straight down is fastest', speeds[0] === Math.max(...speeds), speeds.join(' > '));
   check('speed decreases as you turn',
         speeds[0] > speeds[1] && speeds[1] > speeds[2] && speeds[2] > speeds[3]);
+}
+
+// --- 4b. momentum: gradual build-up, dead stop at full sideways -------------
+{
+  const s = Engine.createState();
+  const ev = [];
+  s.graceTimer = 9; // measure movement, not collisions
+  Engine.step(s, dt, ev);
+  const early = s.speed;
+  check('you push off slowly, not instantly', early > 0 && early < 2,
+        `${early.toFixed(2)}m/s after one tick`);
+  for (let i = 0; i < 60 * 4; i++) { s.graceTimer = 9; Engine.step(s, dt, ev); }
+  check('and build up to full speed',
+        Math.abs(s.speed - Engine.SPEED_BY_HEADING[0]) < 0.01,
+        `${s.speed.toFixed(1)}m/s`);
+
+  // Skis fully across the fall line skid to a dead stop.
+  s.heading = 3;
+  let ticks = 0;
+  let lastY = s.y;
+  while (s.speed > 0 && ticks < 60 * 3) { s.graceTimer = 9; Engine.step(s, dt, ev); ticks++; }
+  check('full sideways stops you dead', s.speed === 0,
+        `stopped in ${(ticks / 60).toFixed(2)}s`);
+  lastY = s.y;
+  for (let i = 0; i < 60; i++) { s.graceTimer = 9; Engine.step(s, dt, ev); }
+  check('and you stay put while stopped', Math.abs(s.y - lastY) < 1e-9);
+  check('a crash costs your momentum', (() => {
+    const t = Engine.createState();
+    t.speed = 15;
+    Engine.crash(t, 12, ev);
+    return t.speed === 0;
+  })());
 }
 
 // --- 5. jumping and flips --------------------------------------------------
@@ -118,7 +154,7 @@ function check(name, cond, detail = '') {
   check('wrap is periodic', Math.abs(Engine.wrap(Engine.WORLD_LIMIT * 2 + 5) - 5) < 1e-9);
   check('wrap is symmetric', Math.abs(Engine.wrap(-Engine.WORLD_LIMIT - 1) - (Engine.WORLD_LIMIT - 1)) < 1e-9);
   check('world limit is 2048', Engine.WORLD_LIMIT === 2048);
-  check('16 pixels per metre', Engine.PIXELS_PER_METRE === 16);
+  check('8 pixels per metre', Engine.PIXELS_PER_METRE === 8);
 }
 
 // --- 8. field is deterministic and stable ---------------------------------
@@ -249,12 +285,14 @@ function check(name, cond, detail = '') {
   let entered = false, judged = 0;
 
   for (let i = 0; i < 60 * 120 && !s.courseFinished; i++) {
-    // Steer toward the next gate, the way a player threads them.
+    // Steer toward the next gate, the way a player threads them. Heading
+    // is capped at 2: full sideways is now a dead stop, and no player
+    // parks across the hill in the middle of a timed run.
     const gates = Engine.gatesFor(s.course);
     const g = gates[s.nextGate];
     if (g) {
       const dx = g.x - s.x;
-      Engine.setHeading(s, Math.max(-3, Math.min(3, Math.round(dx / 2))));
+      Engine.setHeading(s, Math.max(-2, Math.min(2, Math.round(dx / 2))));
     }
     const before = s.nextGate;
     ev.length = 0;

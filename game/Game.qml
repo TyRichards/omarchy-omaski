@@ -1,524 +1,357 @@
 import QtQuick
 import "Engine.js" as Engine
 import "Sprites.js" as Sprites
+import "Font.js" as Font
 
-// The playfield. Draws the slope, the skier, and the status box, and pumps the
-// simulation at a fixed 60 Hz regardless of how often the view repaints.
+// The playfield.
+//
+// Everything is drawn onto one small virtual screen — a Canvas of roughly
+// 220 logical pixels — which is integer-scaled up to the window with no
+// filtering. That is what gives the game its chunky fantasy-console look,
+// and it is also what makes it smooth: one item repaints thirty times a
+// second, instead of a tree's worth of Image objects being created and
+// destroyed every tick (the mistake that made version 2 stutter).
 FocusScope {
   id: root
 
   required property string spriteDir
   property bool windowActive: true
 
-  // Integer zoom keeps the 1991 art pixel-exact. The original ran at roughly
-  // 1:1 on a 640x480 VGA screen; on a modern high-density panel a 2x or 3x
-  // zoom reproduces the same apparent sprite size.
-  readonly property int zoom: {
-    var target = Math.min(width, height)
-    if (target <= 0) return 2
-    var byHeight = Math.floor(target / 300)
-    return Math.max(2, Math.min(4, byHeight))
+  // Integer zoom from window size to the virtual screen.
+  readonly property int pixelScale: {
+    var side = Math.min(width, height)
+    return side <= 0 ? 3 : Math.max(2, Math.round(side / 222))
   }
+  readonly property int vw: Math.max(64, Math.ceil(width / pixelScale))
+  readonly property int vh: Math.max(64, Math.ceil(height / pixelScale))
 
-  // Metres visible across the viewport.
-  readonly property real metresWide: width / (Engine.PIXELS_PER_METRE * zoom)
-  readonly property real metresTall: height / (Engine.PIXELS_PER_METRE * zoom)
-  // Slope visible uphill of the skier, which is where the monster comes from.
-  readonly property real metresAbove: skierScreenY / (Engine.PIXELS_PER_METRE * zoom)
-
-  // Keep the simulation told about the view, so the yeti enters from just off
-  // screen no matter how the window is sized.
-  onMetresAboveChanged: root.sim.viewAbove = root.metresAbove
-
-  // The skier sits about a third of the way down, as in the original, so you
+  // The skier sits about a third of the way down, as in the classic, so you
   // can see what is coming.
-  readonly property real skierScreenY: height * 0.34
+  readonly property int skierY: Math.round(vh * 0.34)
+
+  // Metres of slope visible above the skier — where the monster comes from.
+  onSkierYChanged: root.sim.viewAbove = root.skierY / Engine.PIXELS_PER_METRE
 
   property var sim: Engine.createState()
-  property int repaint: 0
   property var events: []
+  property bool started: false
+  property bool hudVisible: true
 
-  // Debug hook, off unless OMARSKI_DEBUG_START is set to a distance in metres.
-  // Skips the title card and starts that far down the hill, so the late game
-  // and the monster can be exercised without skiing two kilometres first.
+  // Debug hook, off unless OMARSKI_DEBUG_START is set to a distance in
+  // metres: skips the title card and starts that far down the hill.
+  property string debugStartEnv: ""
   readonly property int debugStart: {
     var value = parseInt(root.debugStartEnv || "", 10)
     return isNaN(value) || value < 0 ? 0 : value
   }
-  property string debugStartEnv: ""
-
-  property bool started: false
 
   focus: true
   clip: true
 
   Component.onCompleted: {
-    // Tell the simulation how much slope is visible above the skier.
-    root.sim.viewAbove = root.metresAbove
+    root.sim.viewAbove = root.skierY / Engine.PIXELS_PER_METRE
     if (root.debugStart > 0) {
       root.sim.distance = root.debugStart
       root.sim.y = root.debugStart
+      root.sim.yetiNext = Engine.YETI_DISTANCE
       root.started = true
     }
-    // A FocusScope only receives key events once it actually holds active
-    // focus, so claim it as soon as the item is realised. There is
-    // deliberately no watchdog that re-grabs focus whenever it is lost: that
-    // fights the window manager and spins.
+    for (var id = 1; id <= 89; id++) canvas.loadImage(root.spriteUrl(id))
     root.forceActiveFocus()
   }
 
+  function spriteUrl(id) {
+    return root.spriteDir + "/" + (id < 10 ? "00" : "0") + id + ".png"
+  }
+
+  // The paint code skips sprites that are not loaded, which keeps startup
+  // clean but would also hide a wrong sprite path forever — so say so once.
+  Timer {
+    interval: 2000
+    running: true
+    onTriggered: {
+      if (!canvas.isImageLoaded(root.spriteUrl(1)))
+        console.warn("omarski: sprites did not load from " + root.spriteDir)
+    }
+  }
+
   // ------------------------------------------------------------------------
-  // Simulation clock
+  // Simulation clock: a fixed 30 Hz for both physics and paint
   // ------------------------------------------------------------------------
 
   Timer {
     id: clock
-    interval: Math.round(1000 / Engine.TICK_HZ)
+    interval: 33
     repeat: true
-    // The hill stays still until you take your first run, so the title card
-    // is readable and you are not eaten while reading it.
+    // The hill stays still until the first run, so the title is readable.
     running: root.windowActive && root.started && !root.sim.over
     onTriggered: {
       root.events = []
       Engine.step(root.sim, interval / 1000, root.events)
-      root.repaint++
+      canvas.requestPaint()
     }
   }
 
   // ------------------------------------------------------------------------
-  // World to screen
+  // The virtual screen
   // ------------------------------------------------------------------------
 
-  function screenX(worldX) {
-    var dx = Engine.wrap(worldX - root.sim.x)
-    return Math.round(width / 2 + dx * Engine.PIXELS_PER_METRE * zoom)
-  }
-
-  function screenY(worldY) {
-    var dy = Engine.wrap(worldY - root.sim.y)
-    return Math.round(skierScreenY + dy * Engine.PIXELS_PER_METRE * zoom)
-  }
-
-  // ------------------------------------------------------------------------
-  // Slope
-  // ------------------------------------------------------------------------
-
-  Rectangle {
-    anchors.fill: parent
-    color: "white"
-  }
-
-  // Everything in the world, sorted so lower objects overlap higher ones.
-  Repeater {
-    id: field
-
-    model: {
-      root.repaint  // re-evaluate every tick
-      var pad = 3
-      var list = Engine.objectsIn(
-        root.sim.x - root.metresWide / 2 - pad,
-        root.sim.y - root.skierScreenY / (Engine.PIXELS_PER_METRE * root.zoom) - pad,
-        root.sim.x + root.metresWide / 2 + pad,
-        root.sim.y + root.metresTall + pad,
-        root.sim.course)
-
-      // Course signage near the start.
-      if (root.sim.y < Engine.SIGN_ROW + 60) {
-        for (var i = 0; i < Engine.COURSES.length; i++) {
-          var c = Engine.COURSES[i]
-          list.push({
-            kind: Engine.DECOR, sprite: c.sign,
-            x: c.x, y: Engine.SIGN_ROW,
-            w: Sprites.width(c.sign) / Engine.PIXELS_PER_METRE,
-            h: Sprites.height(c.sign) / Engine.PIXELS_PER_METRE
-          })
-        }
-      }
-
-      // Start and finish banners flanking the active course.
-      var spec = Engine.courseById(root.sim.course)
-      if (spec && root.sim.course !== Engine.COURSE_FREESTYLE) {
-        var banners = [
-          { y: Engine.courseStartY(), l: Sprites.SIGN_START_L, r: Sprites.SIGN_START_R },
-          { y: Engine.courseFinishY(root.sim.course), l: Sprites.SIGN_FINISH_L,
-            r: Sprites.SIGN_FINISH_R }
-        ]
-        for (var b = 0; b < banners.length; b++) {
-          var side = 13
-          list.push({
-            kind: Engine.DECOR, sprite: banners[b].l,
-            x: spec.x - side, y: banners[b].y,
-            w: Sprites.width(banners[b].l) / Engine.PIXELS_PER_METRE,
-            h: Sprites.height(banners[b].l) / Engine.PIXELS_PER_METRE
-          })
-          list.push({
-            kind: Engine.DECOR, sprite: banners[b].r,
-            x: spec.x + side, y: banners[b].y,
-            w: Sprites.width(banners[b].r) / Engine.PIXELS_PER_METRE,
-            h: Sprites.height(banners[b].r) / Engine.PIXELS_PER_METRE
-          })
-        }
-      }
-
-      // Slalom gates for the active course.
-      var gates = Engine.gatesFor(root.sim.course)
-      for (var g = 0; g < gates.length; g++) {
-        var gate = gates[g]
-        var passed = g < root.sim.nextGate
-        list.push({
-          kind: Engine.DECOR, sprite: Sprites.FLAG_LEFT,
-          x: gate.x - gate.halfWidth, y: gate.y,
-          w: Sprites.width(Sprites.FLAG_LEFT) / Engine.PIXELS_PER_METRE,
-          h: Sprites.height(Sprites.FLAG_LEFT) / Engine.PIXELS_PER_METRE
-        })
-        list.push({
-          kind: Engine.DECOR, sprite: Sprites.FLAG_RIGHT,
-          x: gate.x + gate.halfWidth, y: gate.y,
-          w: Sprites.width(Sprites.FLAG_RIGHT) / Engine.PIXELS_PER_METRE,
-          h: Sprites.height(Sprites.FLAG_RIGHT) / Engine.PIXELS_PER_METRE
-        })
-        if (passed) {
-          // A smiling marker for a gate you cleared, a scowling one for a miss.
-          var marker = root.sim.gateResults[g] ? Sprites.GATE_GREEN
-                                               : Sprites.GATE_RED
-          list.push({
-            kind: Engine.DECOR, sprite: marker,
-            x: gate.x, y: gate.y,
-            w: Sprites.width(marker) / Engine.PIXELS_PER_METRE,
-            h: Sprites.height(marker) / Engine.PIXELS_PER_METRE
-          })
-        }
-      }
-
-      list.sort(function (a, b) { return a.y - b.y })
-      return list
-    }
-
-    delegate: PixelSprite {
-      required property var modelData
-      sprite: modelData.sprite
-      nativeWidth: Sprites.width(modelData.sprite)
-      nativeHeight: Sprites.height(modelData.sprite)
-      zoom: root.zoom
-      spriteDir: root.spriteDir
-      // Objects are anchored at the base of the sprite, so the skier's feet
-      // and a tree's trunk meet on the same ground line.
-      x: root.screenX(modelData.x) - width / 2
-      y: root.screenY(modelData.y) - height
-      opacity: modelData.cloud ? 0.85 : 1.0
-    }
+  Canvas {
+    id: canvas
+    width: root.vw
+    height: root.vh
+    transformOrigin: Item.TopLeft
+    scale: root.pixelScale
+    smooth: false          // nearest-neighbour upscale: big square pixels
+    antialiasing: false
+    onPaint: root.draw()
+    // Repaint as sprites arrive so the title card fills in, and repaint on
+    // resize (size changes mark the canvas dirty automatically).
+    onImageLoaded: requestPaint()
   }
 
   // ------------------------------------------------------------------------
-  // The skier
+  // Drawing
   // ------------------------------------------------------------------------
 
-  PixelSprite {
-    id: skier
-    readonly property var frame: {
-      root.repaint
-      return Engine.skierSprite(root.sim)
-    }
+  // PICO-8 ink.
+  readonly property string snow: "#FFF1E8"
+  readonly property string ink: "#000000"
+  readonly property string inkSoft: "#5F574F"
+  readonly property string shadow: "#C2C3C7"
 
-    visible: !root.sim.eaten
-    sprite: frame[0]
-    flipped: frame[1]
-    nativeWidth: Sprites.width(frame[0])
-    nativeHeight: Sprites.height(frame[0])
-    zoom: root.zoom
-    spriteDir: root.spriteDir
-    x: Math.round(root.width / 2 - width / 2)
-    // Airborne height lifts the sprite up the screen.
-    y: {
-      root.repaint
-      return Math.round(root.skierScreenY - height
-        - root.sim.height * Engine.PIXELS_PER_METRE * root.zoom)
-    }
-    z: 10
+  function sx(worldX) {
+    return Math.round(root.vw / 2 + Engine.wrap(worldX - root.sim.x)
+                      * Engine.PIXELS_PER_METRE)
   }
 
-  // A shadow on the snow while airborne, so you can judge your landing.
-  Rectangle {
-    visible: root.sim.airborne && root.sim.height > 0.3
-    width: 10 * root.zoom
-    height: 3 * root.zoom
-    radius: height / 2
-    color: "#20000000"
-    x: Math.round(root.width / 2 - width / 2)
-    y: {
-      root.repaint
-      return Math.round(root.skierScreenY - height / 2)
-    }
-    z: 9
+  function sy(worldY) {
+    return Math.round(root.skierY + Engine.wrap(worldY - root.sim.y)
+                      * Engine.PIXELS_PER_METRE)
   }
 
-  // ------------------------------------------------------------------------
-  // Dogs, snowboarders and other skiers
-  // ------------------------------------------------------------------------
+  // Draw a sprite with its base centred on the world point, `lift` logical
+  // pixels above the snow.
+  function sprite(ctx, id, worldX, worldY, lift) {
+    var url = root.spriteUrl(id)
+    if (!canvas.isImageLoaded(url)) return
+    ctx.drawImage(url,
+                  sx(worldX) - (Sprites.width(id) >> 1),
+                  sy(worldY) - Sprites.height(id) - (lift || 0))
+  }
 
-  Repeater {
-    model: {
-      root.repaint
-      var out = []
-      var list = root.sim.critters
-      for (var i = 0; i < list.length; i++) {
-        var frame = Engine.critterSprite(list[i])
-        out.push({
-          sprite: frame[0],
-          flipped: frame[1],
-          x: list[i].x,
-          y: list[i].y
-        })
-      }
-      return out
-    }
-
-    delegate: PixelSprite {
-      required property var modelData
-      sprite: modelData.sprite
-      flipped: modelData.flipped
-      nativeWidth: Sprites.width(modelData.sprite)
-      nativeHeight: Sprites.height(modelData.sprite)
-      zoom: root.zoom
-      spriteDir: root.spriteDir
-      x: root.screenX(modelData.x) - width / 2
-      y: root.screenY(modelData.y) - height
-      z: 8
+  // A bordered panel of centred text lines, PICO-8 style.
+  function panel(ctx, cx, top, lines) {
+    var w = 0
+    for (var i = 0; i < lines.length; i++)
+      w = Math.max(w, Font.width(lines[i]))
+    w += 8
+    var h = lines.length * 7 + 5
+    var x = Math.round(cx - w / 2)
+    ctx.fillStyle = root.ink
+    ctx.fillRect(x - 1, top - 1, w + 2, h + 2)
+    ctx.fillStyle = root.snow
+    ctx.fillRect(x, top, w, h)
+    ctx.fillStyle = root.ink
+    for (var j = 0; j < lines.length; j++) {
+      Font.draw(ctx, Math.round(cx - Font.width(lines[j]) / 2),
+                top + 3 + j * 7, lines[j])
     }
   }
 
-  // ------------------------------------------------------------------------
-  // The monster
-  // ------------------------------------------------------------------------
+  function draw() {
+    var ctx = canvas.getContext("2d")
+    var s = root.sim
+    var PX = Engine.PIXELS_PER_METRE
 
-  PixelSprite {
-    id: yeti
-    readonly property var info: {
-      root.repaint
-      var s = root.sim
-      if (s.eaten) {
-        return { sprite: Sprites.YETI_EAT_FRAMES[s.eatFrame],
-                 x: s.x, y: s.y }
-      }
-      if (!s.yeti) return null
-      var frames = s.yeti.mode === "roar" ? Sprites.YETI_ROAR_FRAMES
-                 : s.yeti.mode === "leap" ? Sprites.YETI_LEAP_FRAMES
-                 : Sprites.YETI_RUN_FRAMES
-      return { sprite: frames[s.yeti.frame % frames.length],
-               x: s.yeti.x, y: s.yeti.y }
-    }
+    ctx.imageSmoothingEnabled = false
+    ctx.fillStyle = root.snow
+    ctx.fillRect(0, 0, root.vw, root.vh)
 
-    visible: info !== null
-    sprite: info ? info.sprite : Sprites.YETI_RUN_A
-    nativeWidth: Sprites.width(sprite)
-    nativeHeight: Sprites.height(sprite)
-    zoom: root.zoom
-    spriteDir: root.spriteDir
-    x: info ? root.screenX(info.x) - width / 2 : 0
-    y: info ? root.screenY(info.y) - height : 0
-    z: 11
-  }
+    // --- the hill ---------------------------------------------------------
+    var pad = 4
+    var list = Engine.objectsIn(
+      s.x - root.vw / (2 * PX) - pad,
+      s.y - root.skierY / PX - pad,
+      s.x + root.vw / (2 * PX) + pad,
+      s.y + (root.vh - root.skierY) / PX + pad,
+      s.course)
 
-  // ------------------------------------------------------------------------
-  // Status box, mirroring the original's top-right readout
-  // ------------------------------------------------------------------------
-
-  Rectangle {
-    id: statusBox
-    anchors.top: parent.top
-    anchors.right: parent.right
-    anchors.margins: 4 * root.zoom
-    width: statusGrid.implicitWidth + 10 * root.zoom
-    height: statusGrid.implicitHeight + 8 * root.zoom
-    color: "white"
-    border.color: "black"
-    border.width: Math.max(1, root.zoom / 2)
-    visible: root.hudVisible
-    z: 50
-
-    // Four label/value rows: Time, Dist, Speed, Style.
-    Column {
-      id: statusGrid
-      anchors.centerIn: parent
-      spacing: 1 * root.zoom
-
-      Repeater {
-        model: {
-          root.repaint
-          var s = root.sim
-          return [
-            { label: "Time:", value: Engine.formatTime(s.elapsed) },
-            { label: "Dist:", value: Engine.formatDistance(s.distance) },
-            { label: "Speed:", value: Engine.formatSpeed(s.speed) },
-            { label: "Style:", value: Engine.formatStyle(s.style) }
-          ]
-        }
-
-        // Each entry emits its label cell and its value cell.
-        delegate: Row {
-          required property var modelData
-          spacing: 5 * root.zoom
-
-          StatusText {
-            zoom: root.zoom
-            text: parent.modelData.label
-            width: labelWidth
-          }
-          StatusText {
-            zoom: root.zoom
-            text: parent.modelData.value
-            width: valueWidth
-            horizontalAlignment: Text.AlignRight
-          }
-        }
+    // Course signage near the start.
+    if (s.y < Engine.SIGN_ROW + 60 && s.y > -60) {
+      for (var i = 0; i < Engine.COURSES.length; i++) {
+        var c = Engine.COURSES[i]
+        list.push({ sprite: c.sign, x: c.x, y: Engine.SIGN_ROW })
       }
     }
-  }
 
-  property bool hudVisible: true
-
-  // ------------------------------------------------------------------------
-  // Overlays
-  // ------------------------------------------------------------------------
-
-  // Title card, shown until the first input, like the original's splash.
-  Column {
-    anchors.centerIn: parent
-    anchors.verticalCenterOffset: -root.height * 0.08
-    spacing: 6 * root.zoom
-    visible: !root.started
-    z: 60
-
-    PixelSprite {
-      sprite: Sprites.LOGO
-      nativeWidth: Sprites.width(Sprites.LOGO)
-      nativeHeight: Sprites.height(Sprites.LOGO)
-      zoom: root.zoom
-      spriteDir: root.spriteDir
-      anchors.horizontalCenter: parent.horizontalCenter
+    // Start and finish banners flanking the active course.
+    var spec = Engine.courseById(s.course)
+    if (spec && s.course !== Engine.COURSE_FREESTYLE) {
+      list.push({ sprite: Sprites.SIGN_START_L, x: spec.x - 13,
+                  y: Engine.courseStartY() })
+      list.push({ sprite: Sprites.SIGN_START_R, x: spec.x + 13,
+                  y: Engine.courseStartY() })
+      list.push({ sprite: Sprites.SIGN_FINISH_L, x: spec.x - 13,
+                  y: Engine.courseFinishY(s.course) })
+      list.push({ sprite: Sprites.SIGN_FINISH_R, x: spec.x + 13,
+                  y: Engine.courseFinishY(s.course) })
     }
-    PixelSprite {
-      sprite: Sprites.HINT_NUMPAD
-      nativeWidth: Sprites.width(Sprites.HINT_NUMPAD)
-      nativeHeight: Sprites.height(Sprites.HINT_NUMPAD)
-      zoom: root.zoom
-      spriteDir: root.spriteDir
-      anchors.horizontalCenter: parent.horizontalCenter
-    }
-    PixelSprite {
-      sprite: Sprites.HINT_KEYS
-      nativeWidth: Sprites.width(Sprites.HINT_KEYS)
-      nativeHeight: Sprites.height(Sprites.HINT_KEYS)
-      zoom: root.zoom
-      spriteDir: root.spriteDir
-      anchors.horizontalCenter: parent.horizontalCenter
-    }
-    StatusText {
-      anchors.horizontalCenter: parent.horizontalCenter
-      zoom: root.zoom
-      text: "Press any key to ski"
-    }
-  }
 
-  // Course result, shown once you cross the finish banner.
-  Rectangle {
-    anchors.horizontalCenter: parent.horizontalCenter
-    anchors.top: parent.top
-    anchors.topMargin: root.height * 0.16
-    width: resultCol.implicitWidth + 14 * root.zoom
-    height: resultCol.implicitHeight + 10 * root.zoom
-    color: "white"
-    border.color: "black"
-    border.width: Math.max(1, root.zoom / 2)
-    visible: root.sim.courseFinished
-    z: 60
-
-    Column {
-      id: resultCol
-      anchors.centerIn: parent
-      spacing: 2 * root.zoom
-
-      Repeater {
-        model: {
-          root.repaint
-          var s = root.sim
-          var spec = Engine.courseById(s.course)
-          return [
-            (spec ? spec.label : "Course") + " complete",
-            "Time:  " + Engine.formatTime(s.courseTime),
-            "Gates: " + s.gatesCleared + " of "
-              + (s.gatesCleared + s.gatesMissed),
-            "Style: " + Engine.formatStyle(s.style).replace(/^ +/, ""),
-            "F2 to restart"
-          ]
-        }
-        delegate: StatusText {
-          required property string modelData
-          zoom: root.zoom
-          text: modelData
-        }
+    // Slalom gates, with a judged marker once each is passed.
+    var gates = Engine.gatesFor(s.course)
+    for (var g = 0; g < gates.length; g++) {
+      list.push({ sprite: Sprites.FLAG_LEFT,
+                  x: gates[g].x - gates[g].halfWidth, y: gates[g].y })
+      list.push({ sprite: Sprites.FLAG_RIGHT,
+                  x: gates[g].x + gates[g].halfWidth, y: gates[g].y })
+      if (g < s.nextGate) {
+        list.push({ sprite: s.gateResults[g] ? Sprites.GATE_GREEN
+                                             : Sprites.GATE_RED,
+                    x: gates[g].x, y: gates[g].y })
       }
     }
-  }
 
-  // Paused banner, wording taken from the original's string table.
-  Rectangle {
-    anchors.centerIn: parent
-    width: pausedText.implicitWidth + 12 * root.zoom
-    height: pausedText.implicitHeight + 8 * root.zoom
-    color: "white"
-    border.color: "black"
-    border.width: Math.max(1, root.zoom / 2)
-    visible: root.sim.paused
-    z: 60
+    // Painter's order: lower on the hill draws in front.
+    list.sort(function (a, b) { return a.y - b.y })
+    for (var o = 0; o < list.length; o++) {
+      root.sprite(ctx, list[o].sprite, list[o].x, list[o].y)
+    }
 
-    StatusText {
-      id: pausedText
-      anchors.centerIn: parent
-      zoom: root.zoom
-      text: "Ski Paused ... Press F3 to continue"
+    // --- dogs, snowboarders and other skiers ------------------------------
+    for (var k = 0; k < s.critters.length; k++) {
+      var frame = Engine.critterSprite(s.critters[k])
+      root.mirrored(ctx, frame[0], frame[1], s.critters[k].x, s.critters[k].y, 0)
+    }
+
+    // --- the skier --------------------------------------------------------
+    if (!s.eaten) {
+      if (s.airborne && s.height > 0.3) {
+        // A shadow on the snow, to judge the landing by.
+        ctx.fillStyle = root.shadow
+        ctx.fillRect(Math.round(root.vw / 2 - 3), root.skierY - 1, 6, 2)
+      }
+      var pose = Engine.skierSprite(s)
+      root.mirrored(ctx, pose[0], pose[1], s.x, s.y,
+                    Math.round(s.height * PX))
+    }
+
+    // --- the monster ------------------------------------------------------
+    if (s.eaten) {
+      root.sprite(ctx, Sprites.YETI_EAT_FRAMES[s.eatFrame], s.x, s.y)
+    } else if (s.yeti) {
+      var yf = s.yeti.mode === "roar" || s.yeti.mode === "bored"
+             ? Sprites.YETI_ROAR_FRAMES
+             : s.yeti.mode === "leap" ? Sprites.YETI_LEAP_FRAMES
+             : Sprites.YETI_RUN_FRAMES
+      root.sprite(ctx, yf[s.yeti.frame % yf.length], s.yeti.x, s.yeti.y)
+    }
+
+    // --- overlays ---------------------------------------------------------
+    if (root.hudVisible && root.started) root.drawHud(ctx)
+    if (!root.started) root.drawTitle(ctx)
+
+    if (s.courseFinished) {
+      var cspec = Engine.courseById(s.course)
+      panel(ctx, root.vw / 2, Math.round(root.vh * 0.16), [
+        (cspec ? cspec.label : "Course") + " complete!",
+        "Time " + Engine.formatTime(s.courseTime),
+        "Gates " + s.gatesCleared + " of " + (s.gatesCleared + s.gatesMissed),
+        "Style " + Engine.formatStyle(s.style).replace(/^ +/, ""),
+        "F2 to restart"
+      ])
+    }
+
+    if (s.paused) {
+      panel(ctx, root.vw / 2, Math.round(root.vh / 2 - 8),
+            ["Paused - F3 to ski"])
+    }
+
+    if (s.over) {
+      panel(ctx, root.vw / 2, Math.round(root.vh * 0.72),
+            ["You have been eaten.", "F2 to restart"])
     }
   }
 
-  // Eaten. The original just leaves you there; F2 restarts.
-  Rectangle {
-    anchors.horizontalCenter: parent.horizontalCenter
-    anchors.bottom: parent.bottom
-    anchors.bottomMargin: root.height * 0.12
-    width: overText.implicitWidth + 12 * root.zoom
-    height: overText.implicitHeight + 8 * root.zoom
-    color: "white"
-    border.color: "black"
-    border.width: Math.max(1, root.zoom / 2)
-    visible: root.sim.over
-    z: 60
-
-    StatusText {
-      id: overText
-      anchors.centerIn: parent
-      zoom: root.zoom
-      text: "You have been eaten.  Press F2 to restart."
+  // Draw a sprite, optionally mirrored, base-anchored at the world point.
+  function mirrored(ctx, id, flip, worldX, worldY, lift) {
+    var url = root.spriteUrl(id)
+    if (!canvas.isImageLoaded(url)) return
+    var w = Sprites.width(id)
+    var x = sx(worldX) - (w >> 1)
+    var y = sy(worldY) - Sprites.height(id) - (lift || 0)
+    if (!flip) {
+      ctx.drawImage(url, x, y)
+      return
     }
+    ctx.save()
+    ctx.translate(x + w, y)
+    ctx.scale(-1, 1)
+    ctx.drawImage(url, 0, 0)
+    ctx.restore()
+  }
+
+  function drawHud(ctx) {
+    var s = root.sim
+    var lines = [
+      "TIME " + Engine.formatTime(s.elapsed),
+      "DIST " + Engine.formatDistance(s.distance).toUpperCase(),
+      "SPEED " + Engine.formatSpeed(s.speed).toUpperCase(),
+      "STYLE " + Engine.formatStyle(s.style)
+    ]
+    var w = 0
+    for (var i = 0; i < lines.length; i++)
+      w = Math.max(w, Font.width(lines[i]))
+    w += 6
+    var h = lines.length * 7 + 4
+    var x = root.vw - w - 2
+    ctx.fillStyle = root.ink
+    ctx.fillRect(x - 1, 1, w + 2, h + 2)
+    ctx.fillStyle = root.snow
+    ctx.fillRect(x, 2, w, h)
+    ctx.fillStyle = root.ink
+    for (var j = 0; j < lines.length; j++)
+      Font.draw(ctx, x + 3, 4 + j * 7, lines[j])
+  }
+
+  function drawTitle(ctx) {
+    var cx = root.vw / 2
+    var y = Math.round(root.vh * 0.14)
+    var logoUrl = root.spriteUrl(Sprites.LOGO)
+    if (canvas.isImageLoaded(logoUrl)) {
+      ctx.drawImage(logoUrl, Math.round(cx - Sprites.width(Sprites.LOGO) / 2), y)
+    }
+    y += Sprites.height(Sprites.LOGO) + 6
+    var rest = [Sprites.VERSION, Sprites.HINT_NUMPAD, Sprites.HINT_KEYS]
+    for (var i = 0; i < rest.length; i++) {
+      var url = root.spriteUrl(rest[i])
+      if (canvas.isImageLoaded(url)) {
+        ctx.drawImage(url, Math.round(cx - Sprites.width(rest[i]) / 2), y)
+      }
+      y += Sprites.height(rest[i]) + 5
+    }
+    ctx.fillStyle = root.ink
+    var hint = "PRESS ANY KEY TO SKI"
+    Font.draw(ctx, Math.round(cx - Font.width(hint) / 2),
+              Math.min(y + 4, root.vh - 10), hint)
   }
 
   // ------------------------------------------------------------------------
   // Input
   // ------------------------------------------------------------------------
-  //
-  // The original accepts arrow keys, the numeric keypad (which is why it says
-  // "Use NumPad (0-9) for better control"), Home/Insert, and the mouse.
-  // Numpad 1-9 set an absolute heading; arrows nudge it.
+  // Arrow keys and WASD steer; the numeric keypad sets absolute headings;
+  // Home/PageUp side-step uphill; the mouse steers toward the pointer.
 
   function restart() {
     root.sim = Engine.createState()
+    root.sim.viewAbove = root.skierY / Engine.PIXELS_PER_METRE
     root.started = false
-    root.repaint++
+    canvas.requestPaint()
   }
 
   Keys.onPressed: function (event) {
     var s = root.sim
 
-    // Any key dismisses the title card.
     if (!root.started && event.key !== Qt.Key_F2) root.started = true
 
     switch (event.key) {
@@ -540,7 +373,7 @@ FocusScope {
     case Qt.Key_Insert:
       Engine.jump(s, root.events); break
 
-    // --- absolute headings on the numpad, as in the original -------------
+    // --- absolute headings on the numpad --------------------------------
     case Qt.Key_1: Engine.setHeading(s, -3); break
     case Qt.Key_2: Engine.setHeading(s, -2); break
     case Qt.Key_3: Engine.setHeading(s, -1); break
@@ -571,12 +404,12 @@ FocusScope {
       root.hudVisible = !root.hudVisible; break
     case Qt.Key_Y:
       // Summon him early, for the brave.
-      if (!s.yeti) Engine.spawnYeti(s, root.metresAbove)
+      if (!s.yeti) Engine.spawnYeti(s, s.viewAbove)
       break
     case Qt.Key_Escape:
       Qt.quit(); break
     }
-    root.repaint++
+    canvas.requestPaint()
   }
 
   Keys.onReleased: function (event) {
@@ -599,13 +432,11 @@ FocusScope {
     onPositionChanged: function (mouse) {
       if (!root.started) return
       var dx = mouse.x - root.width / 2
-      var dy = mouse.y - root.skierScreenY
-      // Pointer above the skier means side-step uphill.
-      if (dy < -8) return
-      var span = root.width / 2
-      var norm = Math.max(-1, Math.min(1, dx / (span * 0.6)))
+      var dy = mouse.y - root.skierY * root.pixelScale
+      // Pointer above the skier leaves the heading alone.
+      if (dy < -8 * root.pixelScale) return
+      var norm = Math.max(-1, Math.min(1, dx / (root.width * 0.3)))
       Engine.setHeading(root.sim, Math.round(norm * 3))
-      root.repaint++
     }
 
     onPressed: function (mouse) {
@@ -613,7 +444,7 @@ FocusScope {
       root.forceActiveFocus()
       root.started = true
       if (mouse.button === Qt.LeftButton) Engine.jump(root.sim, root.events)
-      root.repaint++
+      canvas.requestPaint()
     }
   }
 }

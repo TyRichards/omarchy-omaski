@@ -34,7 +34,7 @@ FloatingWindow {
 
   title: "Omarski"
   visible: true
-  color: "white"
+  color: "#FFF1E8"   // PICO-8 white, the same snow the canvas paints
 
   implicitWidth: side
   implicitHeight: side
