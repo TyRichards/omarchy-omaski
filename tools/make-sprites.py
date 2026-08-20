@@ -59,7 +59,7 @@ SIZES = {
     36: (10, 10), 37: (13, 15), 38: (10, 15), 39: (13, 16), 40: (15, 15),
     41: (16, 16), 42: (16, 16), 43: (13, 15), 44: (15, 13), 45: (12, 6),
     46: (8, 6), 47: (8, 3), 48: (12, 4), 49: (14, 16), 50: (11, 14),
-    51: (16, 32), 52: (16, 5), 53: (96, 48), 54: (44, 7), 55: (72, 14),
+    51: (16, 32), 52: (16, 6), 53: (120, 64), 54: (44, 7), 55: (72, 14),
     56: (44, 22), 57: (22, 14), 58: (24, 15), 59: (26, 15), 60: (28, 15),
     61: (27, 18), 62: (29, 18), 63: (25, 18), 64: (12, 32), 65: (13, 16),
     66: (13, 16), 67: (13, 16), 68: (16, 24), 69: (16, 24), 70: (16, 24),
@@ -139,32 +139,33 @@ def ellipse(dst, cx, cy, rx, ry, c):
 
 
 # ---------------------------------------------------------------------------
-# A tiny 3x5 pixel font for signs and banners
+# The PICO-8 system font (released CC-0 by Lexaloffle): 3x5 glyphs on a
+# 4-pixel advance. Keep this table in step with game/Font.js.
 # ---------------------------------------------------------------------------
 
 FONT = {
-    "A": ".#. #.# ### #.# #.#", "B": "##. #.# ##. #.# ##.",
-    "C": ".## #.. #.. #.. .##", "D": "##. #.# #.# #.# ##.",
-    "E": "### #.. ##. #.. ###", "F": "### #.. ##. #.. #..",
-    "G": ".## #.. #.# #.# .##", "H": "#.# #.# ### #.# #.#",
-    "I": "### .#. .#. .#. ###", "J": "..# ..# ..# #.# .#.",
+    "A": "### #.# ### #.# #.#", "B": "### #.# ##. #.# ###",
+    "C": ".## #.. #.. #.. .##", "D": "##. #.# #.# #.# ###",
+    "E": "### #.. ### #.. ###", "F": "### #.. ### #.. #..",
+    "G": ".## #.. #.# #.# ###", "H": "#.# #.# ### #.# #.#",
+    "I": "### .#. .#. .#. ###", "J": "### .#. .#. .#. ##.",
     "K": "#.# #.# ##. #.# #.#", "L": "#.. #.. #.. #.. ###",
-    "M": "#.# ### ### #.# #.#", "N": "##. #.# #.# #.# #.#",
-    "O": ".#. #.# #.# #.# .#.", "P": "##. #.# ##. #.. #..",
-    "Q": ".#. #.# #.# ### .##", "R": "##. #.# ##. #.# #.#",
-    "S": ".## #.. .#. ..# ##.", "T": "### .#. .#. .#. .#.",
-    "U": "#.# #.# #.# #.# ###", "V": "#.# #.# #.# #.# .#.",
-    "W": "#.# #.# ### ### #.#", "X": "#.# #.# .#. #.# #.#",
-    "Y": "#.# #.# .#. .#. .#.", "Z": "### ..# .#. #.. ###",
-    "0": ".#. #.# #.# #.# .#.", "1": ".#. ##. .#. .#. ###",
-    "2": "##. ..# .#. #.. ###", "3": "### ..# .#. ..# ###",
-    "4": "#.# #.# ### ..# ..#", "5": "### #.. ##. ..# ##.",
-    "6": ".## #.. ### #.# ###", "7": "### ..# .#. .#. .#.",
-    "8": "### #.# ### #.# ###", "9": "### #.# ### ..# ##.",
-    "(": ".# #. #. #. .#", ")": "#. .# .# .# #.",
+    "M": "### ### #.# #.# #.#", "N": "##. #.# #.# #.# #.#",
+    "O": ".## #.# #.# #.# ##.", "P": "### #.# ### #.. #..",
+    "Q": ".#. #.# #.# ##. .##", "R": "### #.# ##. #.# #.#",
+    "S": ".## #.. ### ..# ##.", "T": "### .#. .#. .#. .#.",
+    "U": "#.# #.# #.# #.# .##", "V": "#.# #.# #.# ### .#.",
+    "W": "#.# #.# #.# ### ###", "X": "#.# #.# .#. #.# #.#",
+    "Y": "#.# #.# ### ..# ###", "Z": "### ..# .#. #.. ###",
+    "0": "### #.# #.# #.# ###", "1": "##. .#. .#. .#. ###",
+    "2": "### ..# ### #.. ###", "3": "### ..# .## ..# ###",
+    "4": "#.# #.# ### ..# ..#", "5": "### #.. ### ..# ###",
+    "6": "#.. #.. ### #.# ###", "7": "### ..# ..# ..# ..#",
+    "8": "### #.# ### #.# ###", "9": "### #.# ### ..# ..#",
+    "(": ".#. #.. #.. #.. .#.", ")": ".#. ..# ..# ..# .#.",
     "-": "... ... ### ... ...", "=": "... ### ... ### ...",
     ".": ". . . . #", "!": "# # # . #", ":": ". # . # .",
-    "/": "..# ..# .#. #.. #..", " ": ".. .. .. .. ..",
+    "/": "..# .#. .#. .#. #..", " ": ".. .. .. .. ..",
 }
 
 
@@ -268,14 +269,14 @@ d.bbbb.d
 d.bbbb.d
 d.bbbb.d
 d..bb..d
-...nn...
 ..nnnn..
-..n..n..
-..n..n..
-..k..k..
-..k..k..
-..k..k..
-..k..k..
+..nnnn..
+.nn..nn.
+.nn..nn.
+.kk..kk.
+.kk..kk.
+.kk..kk.
+.kk..kk.
 """
 
 
@@ -292,15 +293,15 @@ SKIER_DIAG_R = """
 .d.bbbb.
 .d.bbbbd
 .d.bbb.d
-.d..bb.d
-...nnn..
-..nnnn..
-..n..nn.
-.nn...n.
-.k....k.
-..k....k
-..k....k
-...k...k
+....bb.d
+...nnnn.
+...nnnn.
+..nn.nn.
+..nn.nn.
+.kk..kk.
+.kk..kk.
+..kk..kk
+..kk..kk
 """
 
 
@@ -317,18 +318,18 @@ def _skier_diag_l():
 SKIER_TRAV_R = """
 ....rrrr....
 ....rrff....
-...bbbbb....
+...bbbbbb...
 .d.bbbbb.d..
 .d.bbbbb.d..
 .d.bbbbb.d..
 .d..bbb..d..
-....nnn.....
+....nnnn....
 ...nnnnn....
 ...nn.nn....
 ...nn.nn....
-..knnk.nk...
-kkkkkkkkkkkk
-.kkkkkkkkkk.
+..knnknnk...
+.kkkkkkk....
+....kkkkkkk.
 """
 
 
@@ -350,11 +351,11 @@ SKIER_SIDE_R = """
 ..d.bbbb.d..
 ..d.bbbb.d..
 ..d..bb..d..
-....nnn.....
+....nnnn....
 ...nnnnn....
 ...nn.nn....
 ...nn.nn....
-...knnkk....
+..knnknnk...
 kkkkkkkkkkkk
 .kkkkkkkkkk.
 """
@@ -895,14 +896,20 @@ ssssssssssss
 
 @sprite(52)
 def _ramp():
-    art = """
-......rrrr......
-...rrrbbbbbb....
-..bbbggggggggg..
-.gggyyyyyyyyyyy.
-wwwwwwwwwwwwwwww
-"""
-    return place(art, 16, 5)
+    # A rainbow arch lying across the slope: concentric colour bands around
+    # a white face, red outermost.
+    dst = canvas(16, 6)
+    bands = ["r", "o", "y", "g", "b"]
+    for y in range(6):
+        for x in range(16):
+            dx = x - 7.5
+            dy = (5 - y) * 1.55
+            dist = (dx * dx + dy * dy) ** 0.5
+            if dist > 8.4:
+                continue
+            ring = int((8.4 - dist) / 1.05)
+            dst[y][x] = bands[ring] if ring < len(bands) else "w"
+    return dst
 
 
 @sprite(82)
@@ -1203,16 +1210,38 @@ def peak(dst, apex_x, apex_y, height, cap=4):
         blit(dst, [[colour] * (2 * j + 1)], apex_x - j, apex_y + j)
 
 
+def outlined_text(dst, x, y, s, fill, outline, scale):
+    """Fat display text: the glyphs, ringed by a 1px outline."""
+    for ox in (-1, 0, 1):
+        for oy in (-1, 0, 1):
+            if ox or oy:
+                draw_text(dst, x + ox, y + oy, s, outline, scale)
+    draw_text(dst, x, y, s, fill, scale)
+
+
 @sprite(53)
 def _logo():
-    dst = canvas(96, 48)
-    peak(dst, 30, 2, 14)
-    peak(dst, 62, 5, 11)
-    draw_text(dst, (96 - text_width("OMARSKI", 2)) // 2, 17, "OMARSKI", "n", 2)
-    fill_rect(dst, 20, 29, 76, 30, "r")
-    draw_text(dst, (96 - text_width("A FREE OMARCHY GAME", 1)) // 2, 33,
+    dst = canvas(120, 64)
+    # Mountains, with the monster peeking over the smaller one.
+    peak(dst, 44, 2, 17)
+    peak(dst, 84, 7, 12)
+    blit(dst, grid("""
+.dddddd.
+dssssssd
+dkwsskwd
+dssssssd
+dsmmmmsd
+.dssssd.
+"""), 88, 0)
+    # The wordmark: big, blocky, outlined, with a hard drop shadow.
+    word = "OMARSKI"
+    wx = (120 - text_width(word, 3)) // 2
+    draw_text(dst, wx + 2, 24, word, "s", 3)      # shadow
+    outlined_text(dst, wx, 22, word, "r", "k", 3)
+    fill_rect(dst, wx, 41, wx + text_width(word, 3), 43, "n")
+    draw_text(dst, (120 - text_width("A FREE OMARCHY GAME", 1)) // 2, 48,
               "A FREE OMARCHY GAME", "k", 1)
-    draw_text(dst, (96 - text_width("SKI FAST. AVOID THE YETI.", 1)) // 2, 41,
+    draw_text(dst, (120 - text_width("SKI FAST. AVOID THE YETI.", 1)) // 2, 57,
               "SKI FAST. AVOID THE YETI.", "d", 1)
     return dst
 

@@ -293,25 +293,28 @@ FocusScope {
 
   function drawHud(ctx) {
     var s = root.sim
-    var lines = [
-      "TIME " + Engine.formatTime(s.elapsed),
-      "DIST " + Engine.formatDistance(s.distance).toUpperCase(),
-      "SPEED " + Engine.formatSpeed(s.speed).toUpperCase(),
-      "STYLE " + Engine.formatStyle(s.style)
+    // Two columns: labels on the left, values right-aligned so the digits
+    // hold still as they tick.
+    var rows = [
+      ["TIME", Engine.formatTime(s.elapsed)],
+      ["DIST", Math.floor(s.distance) + "M"],
+      ["SPEED", Math.floor(s.speed) + "M/S"],
+      ["STYLE", String(Math.floor(s.style))]
     ]
-    var w = 0
-    for (var i = 0; i < lines.length; i++)
-      w = Math.max(w, Font.width(lines[i]))
-    w += 6
-    var h = lines.length * 7 + 4
+    var labelW = Font.width("SPEED")
+    var valueW = Font.width("0:00:00.00")
+    var w = labelW + 4 + valueW + 6
+    var h = rows.length * 7 + 4
     var x = root.vw - w - 2
     ctx.fillStyle = root.ink
     ctx.fillRect(x - 1, 1, w + 2, h + 2)
     ctx.fillStyle = root.snow
     ctx.fillRect(x, 2, w, h)
     ctx.fillStyle = root.ink
-    for (var j = 0; j < lines.length; j++)
-      Font.draw(ctx, x + 3, 4 + j * 7, lines[j])
+    for (var j = 0; j < rows.length; j++) {
+      Font.draw(ctx, x + 3, 4 + j * 7, rows[j][0])
+      Font.draw(ctx, x + w - 3 - Font.width(rows[j][1]), 4 + j * 7, rows[j][1])
+    }
   }
 
   function drawTitle(ctx) {
@@ -425,12 +428,24 @@ FocusScope {
 
   // Mouse steering: the skier turns toward the pointer, and clicking jumps.
   MouseArea {
+    id: mouseSteer
     anchors.fill: parent
     acceptedButtons: Qt.LeftButton | Qt.RightButton
     hoverEnabled: true
 
+    // Where the pointer last actually steered from. A resting pointer
+    // jitters by a pixel or two, and that must never override a heading
+    // set on the keyboard — a stopped skier has to stay stopped.
+    property real steerX: -1
+    property real steerY: -1
+
     onPositionChanged: function (mouse) {
       if (!root.started) return
+      if (steerX < 0) { steerX = mouse.x; steerY = mouse.y; return }
+      if (Math.abs(mouse.x - steerX) + Math.abs(mouse.y - steerY)
+          < 4 * root.pixelScale) return
+      steerX = mouse.x
+      steerY = mouse.y
       var dx = mouse.x - root.width / 2
       var dy = mouse.y - root.skierY * root.pixelScale
       // Pointer above the skier leaves the heading alone.
