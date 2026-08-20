@@ -1,21 +1,21 @@
 .pragma library
 
-// Catalog of the 89 bitmaps embedded in the official ski32.exe, mapped from
-// raw resource id to the role each one plays in the game. Every sprite is
+// Catalog of the 89 original Omarski sprites in assets/sprites/, mapped from
+// sprite id to the role each one plays in the game. Every sprite is
 // referenced by name from here so the engine never hardcodes a bare number.
 //
-// Resource ids are stable across Chris Pirih's 16-bit 1991 build and his
-// 32-bit 2005 rebuild; they were identified by rendering each bitmap and
-// cross-referencing the original game's on-screen behaviour.
+// The artwork is drawn for this project by tools/make-sprites.py and ships
+// with the plugin. The ids and canvas sizes double as the engine's layout
+// and collision metrics, so they must stay in step with the generator.
 
 // --------------------------------------------------------------------------
 // The skier
 // --------------------------------------------------------------------------
 //
-// SkiFree steers through seven discrete headings. Sprites 2..7 cover the
-// right-hand half plus straight-down, and the mirrored pairs (2/5, 4/7) give
-// the left-hand half. Mirroring is verified programmatically: sprite 5 is
-// exactly sprite 2 flipped, and 7 is exactly 4 flipped.
+// Steering runs through seven discrete headings. Sprites 2..7 cover the
+// right-hand half plus straight-down, and the mirrored pairs (2/5, 3/6, 4/7)
+// give the left-hand half; the generator produces each left sprite by
+// flipping its right-hand twin.
 var SKIER_DOWN = 1;        // tucked, pointing straight downhill (fastest)
 var SKIER_DIAG_R = 2;      // carving down-right
 var SKIER_TRAV_R = 3;      // traversing right, heavy edge
@@ -126,8 +126,8 @@ var LIFT_CHAIR_EMPTY = 67;
 // --------------------------------------------------------------------------
 // Signage
 // --------------------------------------------------------------------------
-var LOGO = 53;             // "SkiFree - Copyright 1991 by Chris Pirih"
-var VERSION = 54;          // "Version 1.04"
+var LOGO = 53;             // the Omarski title card
+var VERSION = 54;          // "Version 2.0"
 var HINT_NUMPAD = 55;      // "Use NumPad (0-9) for better control"
 var HINT_KEYS = 56;        // "F2 = Restart / F3 = Pause"
 var SIGN_START_R = 57;
@@ -168,7 +168,7 @@ var YETI_EAT_FRAMES = [YETI_EAT_A, YETI_EAT_B, YETI_EAT_C, YETI_EAT_D,
 // --------------------------------------------------------------------------
 //
 // Sprite dimensions, so the engine can size and centre images without waiting
-// on asynchronous image loads. Taken from the DIB headers in ski32.exe.
+// on asynchronous image loads. Kept identical to tools/make-sprites.py.
 var SIZES = {
   1: [16, 32], 2: [16, 32], 3: [24, 28], 4: [24, 28], 5: [16, 32],
   6: [24, 28], 7: [24, 28], 8: [24, 28], 9: [24, 28], 10: [24, 28],

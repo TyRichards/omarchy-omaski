@@ -1,3 +1,2 @@
-# Extracted sprite cache, if anyone points the extractor at the plugin dir.
-sprites/
 *.png.tmp
+HANDOFF.md

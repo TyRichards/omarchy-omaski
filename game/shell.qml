@@ -21,18 +21,15 @@ FloatingWindow {
     return isNaN(value) || value < 320 ? 886 : value
   }
 
-  // Where the extracted sprites live. The launcher passes OMARSKI_SPRITES;
-  // a direct `quickshell -p ./game` falls back to the standard cache path.
+  // Where the sprites live. They ship with the plugin in assets/sprites,
+  // next to this shell's directory. Qt.resolvedUrl cannot be used here
+  // because Quickshell serves QML from a virtual qrc filesystem, so the real
+  // path comes from Quickshell.shellDir. OMARSKI_SPRITES overrides it for
+  // experiments with alternative sprite sets.
   readonly property string spriteDir: {
     var dir = Quickshell.env("OMARSKI_SPRITES") || ""
     if (dir !== "") return dir
-    var cache = Quickshell.env("XDG_CACHE_HOME") || ""
-    if (cache === "") {
-      var home = Quickshell.env("HOME") || ""
-      if (home === "") return ""
-      cache = home + "/.cache"
-    }
-    return cache + "/omarski/sprites"
+    return Quickshell.shellDir + "/../assets/sprites"
   }
 
   title: "Omarski"

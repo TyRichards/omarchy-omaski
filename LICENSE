@@ -22,6 +22,9 @@ SOFTWARE.
 
 ---
 
-SkiFree and its artwork are the work of Chris Pirih (https://ski.ihoc.net/).
-No SkiFree artwork is distributed with this plugin; the sprites are downloaded
-from the author's own site at runtime and cached locally.
+All artwork in assets/sprites/ is original to this project, generated from
+the pixel grids in tools/make-sprites.py, and is covered by the MIT license
+above. Omarski is an original homage to the skiing-game genre defined by
+Chris Pirih's SkiFree (https://ski.ihoc.net/); it shares no code, artwork, or
+other assets with SkiFree, and is not affiliated with or endorsed by its
+author or Microsoft.

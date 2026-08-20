@@ -12,15 +12,7 @@ set -euo pipefail
 
 plugin_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 app_id=io.github.tyrichards.omarski
-sprite_dir="${XDG_CACHE_HOME:-$HOME/.cache}/omarski/sprites"
-
-notify() {
-  if command -v omarchy-notification-send >/dev/null 2>&1; then
-    omarchy-notification-send "Omarski" "$1"
-  else
-    printf 'omarski: %s\n' "$1" >&2
-  fi
-}
+sprite_dir="$plugin_dir/assets/sprites"
 
 # ---------------------------------------------------------------------------
 # Focus an existing run instead of opening a second copy.
@@ -30,18 +22,6 @@ if address=$(hyprctl clients -j 2>/dev/null |
   [[ -n $address ]]; then
   hyprctl dispatch "hl.dsp.focus({ window = \"address:$address\" })" >/dev/null
   exit 0
-fi
-
-# ---------------------------------------------------------------------------
-# Make sure the original sprites are on disk.
-# ---------------------------------------------------------------------------
-if [[ ! -f "$sprite_dir/.complete" ]]; then
-  notify "Fetching the original SkiFree sprites…"
-  if ! python3 "$plugin_dir/extract-sprites.py" -o "$sprite_dir"; then
-    notify "Could not fetch sprites. Check your connection and try again."
-    exit 1
-  fi
-  notify "Sprites ready. Hitting the slopes."
 fi
 
 # ---------------------------------------------------------------------------
