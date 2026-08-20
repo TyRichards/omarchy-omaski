@@ -1,0 +1,109 @@
+import QtQuick
+import Quickshell
+import Quickshell.Io
+
+// The game window.
+//
+// The launcher applies one-shot Hyprland rules that float this window at the
+// exact geometry Omarchy's "single-window square aspect ratio" layout would
+// produce, so Omarski opens as a true 1:1 square in the same place a lone
+// maximised window would sit.
+//
+// The size is requested, not locked: pinning minimumSize to maximumSize makes
+// the compositor destroy the window if a user's config tiles it instead. The
+// playfield simply adapts to whatever size it is given.
+FloatingWindow {
+  id: window
+
+  // Preferred edge length in logical pixels, from the launcher.
+  readonly property int side: {
+    var value = parseInt(Quickshell.env("OMARSKI_SIDE") || "", 10)
+    return isNaN(value) || value < 320 ? 886 : value
+  }
+
+  // Where the extracted sprites live. The launcher passes OMARSKI_SPRITES;
+  // a direct `quickshell -p ./game` falls back to the standard cache path.
+  readonly property string spriteDir: {
+    var dir = Quickshell.env("OMARSKI_SPRITES") || ""
+    if (dir !== "") return dir
+    var cache = Quickshell.env("XDG_CACHE_HOME") || ""
+    if (cache === "") {
+      var home = Quickshell.env("HOME") || ""
+      if (home === "") return ""
+      cache = home + "/.cache"
+    }
+    return cache + "/omarski/sprites"
+  }
+
+  title: "Omarski"
+  visible: true
+  color: "white"
+
+  implicitWidth: side
+  implicitHeight: side
+  minimumSize: Qt.size(320, 320)
+  maximized: false
+  fullscreen: false
+
+  Game {
+    anchors.fill: parent
+    spriteDir: window.spriteDir
+    windowActive: true
+    focus: true
+    // Debug only: start this many metres down the hill. See Game.qml.
+    debugStartEnv: Quickshell.env("OMARSKI_DEBUG_START") || ""
+  }
+
+  // ------------------------------------------------------------------------
+  // Shutdown
+  // ------------------------------------------------------------------------
+  //
+  // Quickshell keeps its process alive after the last window closes, so the
+  // shell has to exit deliberately. Closing the window is the only way out
+  // besides Escape, and Qt reports that as `closed` on the FloatingWindow.
+  //
+  // `closed` on its own is not trustworthy: Hyprland also emits it when it
+  // merely unmaps the window, which happens on every workspace switch. So the
+  // signal is treated as a hint, and confirmed by asking the compositor
+  // whether the client is really gone. Only a clear "no" quits, and a failed
+  // or empty query is ignored rather than treated as a close.
+
+  property int confirmations: 0
+
+  onClosed: {
+    window.confirmations = 0
+    confirm.restart()
+  }
+
+  // Remapping cancels a pending confirmation.
+  onVisibleChanged: if (visible) { confirm.stop(); window.confirmations = 0 }
+
+  Timer {
+    id: confirm
+    interval: 700
+    repeat: true
+    // Three agreeing answers, so one hiccup cannot close the game.
+    onTriggered: if (!clientCheck.running) clientCheck.running = true
+  }
+
+  Process {
+    id: clientCheck
+    command: ["bash", "-c",
+      "hyprctl clients -j | jq -e -r 'any(.[]; .class == \"io.github.tyrichards.omarski\")'"]
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: {
+        var answer = text.trim()
+        if (answer === "true") {
+          // Still there: it was only an unmap.
+          confirm.stop()
+          window.confirmations = 0
+        } else if (answer === "false") {
+          window.confirmations++
+          if (window.confirmations >= 3) Qt.quit()
+        }
+        // Anything else means the query failed; wait and ask again.
+      }
+    }
+  }
+}

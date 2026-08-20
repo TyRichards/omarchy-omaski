@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.tyrichards.omarski",
+  "name": "Omarski",
+  "version": "1.0.0",
+  "author": "Ty Richards",
+  "license": "MIT",
+  "description": "The 1991 SkiFree, faithfully rebuilt for Omarchy with the original sprites. Opens as a square 1:1 window.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Omarski",
+    "description": "Ski the endless slope, hit the ramps, and outrun the Abominable Snow Monster",
+    "category": "Fun",
+    "aliases": ["omarski", "skifree", "ski"],
+    "allowMultiple": false,
+    "defaultSection": "left"
+  }
+}
