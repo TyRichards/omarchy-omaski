@@ -56,7 +56,9 @@ FocusScope {
       root.sim.yetiNext = Engine.YETI_DISTANCE
       root.started = true
     }
-    for (var id = 1; id <= 89; id++) canvas.loadImage(root.spriteUrl(id))
+    var ids = Object.keys(Sprites.SIZES)
+    for (var i = 0; i < ids.length; i++)
+      canvas.loadImage(root.spriteUrl(Number(ids[i])))
     root.forceActiveFocus()
   }
 
@@ -174,43 +176,7 @@ FocusScope {
       s.x - root.vw / (2 * PX) - pad,
       s.y - root.skierY / PX - pad,
       s.x + root.vw / (2 * PX) + pad,
-      s.y + (root.vh - root.skierY) / PX + pad,
-      s.course)
-
-    // Course signage near the start.
-    if (s.y < Engine.SIGN_ROW + 60 && s.y > -60) {
-      for (var i = 0; i < Engine.COURSES.length; i++) {
-        var c = Engine.COURSES[i]
-        list.push({ sprite: c.sign, x: c.x, y: Engine.SIGN_ROW })
-      }
-    }
-
-    // Start and finish banners flanking the active course.
-    var spec = Engine.courseById(s.course)
-    if (spec && s.course !== Engine.COURSE_FREESTYLE) {
-      list.push({ sprite: Sprites.SIGN_START_L, x: spec.x - 13,
-                  y: Engine.courseStartY() })
-      list.push({ sprite: Sprites.SIGN_START_R, x: spec.x + 13,
-                  y: Engine.courseStartY() })
-      list.push({ sprite: Sprites.SIGN_FINISH_L, x: spec.x - 13,
-                  y: Engine.courseFinishY(s.course) })
-      list.push({ sprite: Sprites.SIGN_FINISH_R, x: spec.x + 13,
-                  y: Engine.courseFinishY(s.course) })
-    }
-
-    // Slalom gates, with a judged marker once each is passed.
-    var gates = Engine.gatesFor(s.course)
-    for (var g = 0; g < gates.length; g++) {
-      list.push({ sprite: Sprites.FLAG_LEFT,
-                  x: gates[g].x - gates[g].halfWidth, y: gates[g].y })
-      list.push({ sprite: Sprites.FLAG_RIGHT,
-                  x: gates[g].x + gates[g].halfWidth, y: gates[g].y })
-      if (g < s.nextGate) {
-        list.push({ sprite: s.gateResults[g] ? Sprites.GATE_GREEN
-                                             : Sprites.GATE_RED,
-                    x: gates[g].x, y: gates[g].y })
-      }
-    }
+      s.y + (root.vh - root.skierY) / PX + pad)
 
     // Painter's order: lower on the hill draws in front.
     list.sort(function (a, b) { return a.y - b.y })
@@ -218,10 +184,17 @@ FocusScope {
       root.sprite(ctx, list[o].sprite, list[o].x, list[o].y)
     }
 
-    // --- dogs, snowboarders and other skiers ------------------------------
+    // --- dogs, deer, snowboarders and other skiers ------------------------
     for (var k = 0; k < s.critters.length; k++) {
-      var frame = Engine.critterSprite(s.critters[k])
-      root.mirrored(ctx, frame[0], frame[1], s.critters[k].x, s.critters[k].y, 0)
+      var cr = s.critters[k]
+      var frame = Engine.critterSprite(cr)
+      root.mirrored(ctx, frame[0], frame[1], cr.x, cr.y, 0)
+      if (cr.bark && !cr.down) {
+        // The dog pipes up when you get close.
+        ctx.fillStyle = root.ink
+        Font.draw(ctx, sx(cr.x) - (Font.width("WOOF!") >> 1),
+                  sy(cr.y) - Sprites.height(frame[0]) - 8, "WOOF!")
+      }
     }
 
     // --- the skier --------------------------------------------------------
@@ -234,6 +207,21 @@ FocusScope {
       var pose = Engine.skierSprite(s)
       root.mirrored(ctx, pose[0], pose[1], s.x, s.y,
                     Math.round(s.height * PX))
+      if (s.crashed) {
+        // The starburst, shouting its randomly chosen word.
+        var burstTop = sy(s.y) - Sprites.height(s.crashSprite)
+                     - Sprites.height(Sprites.CRASH_OUCH) - 2
+        var burstUrl = root.spriteUrl(Sprites.CRASH_OUCH)
+        if (canvas.isImageLoaded(burstUrl)) {
+          ctx.drawImage(burstUrl,
+                        sx(s.x) - (Sprites.width(Sprites.CRASH_OUCH) >> 1),
+                        burstTop)
+        }
+        ctx.fillStyle = root.ink
+        Font.draw(ctx, sx(s.x) - (Font.width(s.crashWord) >> 1),
+                  burstTop + ((Sprites.height(Sprites.CRASH_OUCH) - 5) >> 1),
+                  s.crashWord)
+      }
     }
 
     // --- the monster ------------------------------------------------------
@@ -251,20 +239,9 @@ FocusScope {
     if (root.hudVisible && root.started) root.drawHud(ctx)
     if (!root.started) root.drawTitle(ctx)
 
-    if (s.courseFinished) {
-      var cspec = Engine.courseById(s.course)
-      panel(ctx, root.vw / 2, Math.round(root.vh * 0.16), [
-        (cspec ? cspec.label : "Course") + " complete!",
-        "Time " + Engine.formatTime(s.courseTime),
-        "Gates " + s.gatesCleared + " of " + (s.gatesCleared + s.gatesMissed),
-        "Style " + Engine.formatStyle(s.style).replace(/^ +/, ""),
-        "F2 to restart"
-      ])
-    }
-
     if (s.paused) {
       panel(ctx, root.vw / 2, Math.round(root.vh / 2 - 8),
-            ["Paused - F3 to ski"])
+            ["PAUSED - Ⓞ TO SKI"])
     }
 
     if (s.over) {
@@ -318,25 +295,32 @@ FocusScope {
   }
 
   function drawTitle(ctx) {
+    // The logo rides high and the text sits low, so the skier himself is
+    // in clear view between them, waiting at the start.
     var cx = root.vw / 2
-    var y = Math.round(root.vh * 0.14)
     var logoUrl = root.spriteUrl(Sprites.LOGO)
     if (canvas.isImageLoaded(logoUrl)) {
-      ctx.drawImage(logoUrl, Math.round(cx - Sprites.width(Sprites.LOGO) / 2), y)
+      ctx.drawImage(logoUrl, Math.round(cx - Sprites.width(Sprites.LOGO) / 2), 2)
     }
-    y += Sprites.height(Sprites.LOGO) + 6
+
+    ctx.fillStyle = root.ink
+    var y = Math.max(Sprites.height(Sprites.LOGO) + 8, root.skierY + 10)
+    var tag = "SKI FREE. AVOID THE YETI."
+    Font.draw(ctx, Math.round(cx - Font.width(tag) / 2), y, tag)
+    y += 9
+
     var rest = [Sprites.VERSION, Sprites.HINT_NUMPAD, Sprites.HINT_KEYS]
     for (var i = 0; i < rest.length; i++) {
       var url = root.spriteUrl(rest[i])
       if (canvas.isImageLoaded(url)) {
         ctx.drawImage(url, Math.round(cx - Sprites.width(rest[i]) / 2), y)
       }
-      y += Sprites.height(rest[i]) + 5
+      y += Sprites.height(rest[i]) + 4
     }
     ctx.fillStyle = root.ink
-    var hint = "PRESS ANY KEY TO SKI"
+    var hint = "PRESS ❎ TO SKI"
     Font.draw(ctx, Math.round(cx - Font.width(hint) / 2),
-              Math.min(y + 4, root.vh - 10), hint)
+              Math.min(y + 3, root.vh - 10), hint)
   }
 
   // ------------------------------------------------------------------------
@@ -355,6 +339,7 @@ FocusScope {
   Keys.onPressed: function (event) {
     var s = root.sim
 
+    var wasStarted = root.started
     if (!root.started && event.key !== Qt.Key_F2) root.started = true
 
     switch (event.key) {
@@ -369,12 +354,15 @@ FocusScope {
     case Qt.Key_S:
       Engine.setHeading(s, 0); break
 
-    // --- jump -----------------------------------------------------------
+    // --- jump (❎ in PICO-8 terms) ---------------------------------------
     case Qt.Key_Up:
     case Qt.Key_W:
     case Qt.Key_Space:
     case Qt.Key_Insert:
-      Engine.jump(s, root.events); break
+    case Qt.Key_X:
+      // Holding the key auto-repeats; one press is one hop.
+      if (!event.isAutoRepeat) Engine.jump(s, root.events)
+      break
 
     // --- absolute headings on the numpad --------------------------------
     case Qt.Key_1: Engine.setHeading(s, -3); break
@@ -402,7 +390,10 @@ FocusScope {
       root.restart(); break
     case Qt.Key_F3:
     case Qt.Key_P:
-      s.paused = !s.paused; break
+    case Qt.Key_Z:      // Ⓞ in PICO-8 terms
+      // The keystroke that leaves the title screen must not also pause.
+      if (wasStarted) s.paused = !s.paused
+      break
     case Qt.Key_H:
       root.hudVisible = !root.hudVisible; break
     case Qt.Key_Y:

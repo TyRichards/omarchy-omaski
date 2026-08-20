@@ -33,10 +33,11 @@ Version 3 repaints one item.)
 
 ## The artwork is original — and yours to redistribute
 
-Every one of the **89 sprites** in `assets/sprites/` — the skier, the trees,
-the rainbow ramp, the chairlift, the dog, the snowboarders, the OW! starburst
-and all fourteen frames of the Abominable Snow Monster — was drawn for this
-project, at 8 pixels per metre. The pixel grids live in
+Every one of the **85 sprites** in `assets/sprites/` — the skier in his red
+beanie, the triangle-stacked trees, the big dead snags, the rainbow ramp, the
+chairlift, the barking dog, the deer (and what is left of one), the
+snowboarders, the crash starburst and every frame of the Abominable Snow
+Monster's table manners — was drawn for this project, at 8 pixels per metre. The pixel grids live in
 `tools/make-sprites.py` (pure Python standard library), which renders the
 whole set:
 
@@ -62,17 +63,20 @@ The simulation is a from-scratch implementation of the classic's rules:
 | Turning scrubs speed | Edging across the fall line brakes much faster than gravity builds |
 | `F` doubles the game speed | `FAST_MULTIPLIER = 2.0` |
 | The monster appears after 2000 m | `YETI_DISTANCE = 2000` |
-| He cannot be outrun at normal speed | 16.5 m/s beats a 15 m/s tuck; only `F` escapes |
+| He cannot be outrun at normal speed | 21 m/s crushes a 15 m/s tuck; only `F` escapes |
 | He cannot grab you in mid-air | Collision is skipped while airborne |
 | Escape him and he returns | Outrun him by 60 m and he gives up — until 2000 m later |
-| Three courses off the start | Slalom, Free-style, Tree Slalom, chosen by which sign you pass |
-| Slalom gates score you | A smiling marker for a cleared gate, a scowling one for a miss |
-| Start and Finish banners | Drawn at each end of a course, with a result panel at the finish |
-| Trees, rocks, stumps, moguls, ramps | All present, with the ramp giving the biggest air |
+| Caught skiers get eaten on camera | A violent shove, then a freeze frame on the boots |
+| A crash puts you down until you act | You sit — skis up, /\O/\ — until a key picks you up |
+| Moguls rattle, the ramp launches | Bumps scrub speed and fan you into an X; the rainbow gives air |
+| Trees, rocks, stumps, dead snags | All present, all solid |
 | Jumps carry your line | Air velocity is frozen at the lip; steering mid-air works a backflip |
-| Dogs, snowboarders, other skiers | Wander the hill and knock you down on contact |
+| Dogs, deer, boarders, other skiers | Dogs cross and bark; deer cross and, if hit, burst |
 | Status box: Time / Dist / Speed / Style | Same four rows, `0:01:36.54` and `  723m` formats |
 | Deterministic hill | Hashed per-cell placement, so the slope is identical every run |
+
+One deliberate departure from the classic: there are no course signs and no
+slalom modes. It is one mode — down the hill.
 
 ## Controls
 
@@ -80,11 +84,12 @@ The simulation is a from-scratch implementation of the classic's rules:
 |---|---|
 | Arrows / `WASD` | Steer |
 | Numpad `1`–`9` | Absolute heading — "Use NumPad (0-9) for better control" |
-| `Space`, `Up`, `Insert`, left click | Jump — press again in the air to work a backflip |
+| `X` (❎), `Space`, `Up`, `Insert`, left click | Jump — steer in the air to work a backflip |
 | Mouse | Steer toward the pointer |
 | Hold `F` | Fast mode. The only way past the monster |
 | `Home` / `PageUp` | Side-step uphill |
-| `F3` or `P` | Pause |
+| `Z` (Ⓞ), `F3` or `P` | Pause |
+| Any steering or jump key | Get back up after a crash |
 | `F2` | Restart |
 | `H` | Toggle the status box |
 | `Y` | Summon the monster early, if you are feeling brave |
@@ -120,17 +125,17 @@ Two details worth knowing, both learned the hard way:
 
 The simulation is plain JavaScript, so it runs headless under node. The suite
 covers momentum (push-off, top speed, the dead stop at full sideways, crashes
-zeroing it), crash recovery, jump and backflip scoring, world wrapping, field
-determinism, course selection, status formatting, the sprite catalog, and
-both halves of the monster rule — that he eats you at normal speed and that
-`F` gets you away.
+zeroing it), the crash freeze and key-to-get-up rule, mogul rattles versus
+ramp launches (including the standing-on-a-bump regression), jump and
+backflip scoring, deer bursts, barking dogs, world wrapping, field
+determinism, status formatting, the sprite catalog, and both halves of the
+monster rule — that he eats you at normal speed and that `F` gets you away.
 
 ```bash
 node test/test-run.mjs
 ```
 
-64 checks, including a full played slalom run that steers gate to gate and
-asserts every one of the 27 gates is judged and the finish is reached.
+71 checks, all green.
 
 There is also a debug hook for exercising the late game without skiing two
 kilometres by hand:

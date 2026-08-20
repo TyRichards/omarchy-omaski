@@ -3,11 +3,12 @@
 .import "Sprites.js" as Sprites
 
 // ---------------------------------------------------------------------------
-// Omarski engine, third rebuild
+// Omarski engine, fourth cut
 // ---------------------------------------------------------------------------
 //
 // A from-scratch simulation of the rules of the classic 1991 skiing game,
-// as documented by its author and observed in play:
+// as documented by its author and observed in play — trimmed to a single
+// mode: down the hill, past whatever the hill throws at you.
 //
 //   * The world wraps at +/-2048 metres in every direction.
 //   * Seven discrete headings: straight down, three grades each way. The
@@ -15,12 +16,13 @@
 //     skid to a dead stop.
 //   * The skier carries momentum. From a standstill you build speed
 //     gradually; turning across the hill scrubs it off; a crash resets it
-//     to zero and you push off again.
+//     to zero — and leaves you sitting in the snow until you press
+//     something to get back up.
+//   * Moguls rattle you and scrub speed; only the rainbow ramp gives air.
 //   * F doubles the speed.
-//   * The Abominable Snow Monster appears past 2000 metres. He is faster
-//     than a tucked skier, so only F escapes; he cannot grab you mid-air.
+//   * The Abominable Snow Monster appears past 2000 metres. He is
+//     terrifyingly fast — only F escapes; he cannot grab you mid-air.
 //     Outrun him far enough and he gives up — until the next 2000 metres.
-//   * Three courses branch off the start: Slalom, Free-style, Tree Slalom.
 //
 // The object field is generated deterministically from the world coordinate,
 // so the hill is stable: ski back uphill and the same trees are still there.
@@ -52,23 +54,32 @@ var CLIMB_SPEED = 3.0;           // m/s when side-stepping back up
 
 // --- crashes ---------------------------------------------------------------
 
-var CRASH_SECONDS = 1.4;         // time spent in the snow
+var CRASH_MIN_SECONDS = 0.7;     // you cannot get up faster than this
 var CRASH_GRACE = 0.6;           // immunity after standing back up
 
+// --- moguls ----------------------------------------------------------------
+
+var BUMP_SLOW = 0.55;            // fraction of speed kept over a mogul
+var BUMP_SECONDS = 0.5;          // how long the X-pose rattle lasts
+var BUMP_COOLDOWN = 0.9;         // no double-rattle from the same bump
+
 // --- air -------------------------------------------------------------------
-// Tuned so a mogul gives about a second of air and a rainbow ramp closer to
-// two — long enough to work a backflip round.
+// Tuned so the rainbow ramp gives a couple of seconds of air — long enough
+// to work a backflip round with the steering keys.
 
 var GRAVITY = 12.0;              // m/s^2
 var JUMP_IMPULSE = 8.5;          // m/s at power 1.0
 var SPEED_BOOST = 0.35;          // extra air from carrying speed into the lip
+var LAND_GRACE = 0.5;            // seconds before another lip can launch you
 
 // --- the monster -----------------------------------------------------------
 
 var YETI_DISTANCE = 2000;        // metres before the first one shows up
 var YETI_RESPAWN = 2000;         // and another every this much further
-var YETI_SPEED = 16.5;           // m/s, faster than a tucked skier
+var YETI_SPEED = 21.0;           // m/s: terrifying. Only F outruns him.
 var YETI_GIVE_UP = 60;           // metres behind at which he loses interest
+var EAT_FRAME_SECONDS = 0.16;    // the shove is violent and quick
+var EAT_TOTAL_SECONDS = 3.0;     // then the freeze frame holds
 
 // --- terrain ---------------------------------------------------------------
 // One object may occupy each 7x7 metre cell; cell size and OBJECT_CHANCE
@@ -77,10 +88,10 @@ var YETI_GIVE_UP = 60;           // metres behind at which he loses interest
 var CELL = 7;
 var OBJECT_CHANCE = 0.52;
 
-// A clearing around the start keeps the three course signs readable.
-var START_CLEAR_X = 30;
-var START_CLEAR_TOP = -18;
-var START_CLEAR_BOTTOM = 34;
+// A small clearing around the start, so the first push-off is fair.
+var START_CLEAR_X = 14;
+var START_CLEAR_TOP = -10;
+var START_CLEAR_BOTTOM = 18;
 
 // ---------------------------------------------------------------------------
 // Deterministic hashing
@@ -110,66 +121,12 @@ function wrap(value) {
 }
 
 // ---------------------------------------------------------------------------
-// Courses
-// ---------------------------------------------------------------------------
-// Three signs stand just below the start; skiing past one enters its course.
-
-var COURSE_NONE = "free";
-var COURSE_SLALOM = "slalom";
-var COURSE_FREESTYLE = "freestyle";
-var COURSE_TREE = "tree";
-
-var COURSE_LENGTH = 500;   // metres of gates
-var SIGN_ROW = 26;         // metres below the start where the signs stand
-
-var COURSES = [
-  { id: COURSE_SLALOM, x: -44, sign: Sprites.SIGN_SLALOM, label: "Slalom" },
-  { id: COURSE_FREESTYLE, x: 0, sign: Sprites.SIGN_FREESTYLE, label: "Free style" },
-  { id: COURSE_TREE, x: 44, sign: Sprites.SIGN_TREE_SLALOM, label: "Tree Slalom" }
-];
-
-function courseById(id) {
-  for (var i = 0; i < COURSES.length; i++)
-    if (COURSES[i].id === id) return COURSES[i];
-  return null;
-}
-
-function courseStartY() {
-  return SIGN_ROW + 34;
-}
-
-function courseFinishY(course) {
-  var gates = gatesFor(course);
-  return gates.length ? gates[gates.length - 1].y + 14 : SIGN_ROW + COURSE_LENGTH;
-}
-
-// Gates weave side to side down the course; Tree Slalom spaces them wider
-// but squeezes them narrower, because the timber does half the work.
-function gatesFor(course) {
-  var spec = courseById(course);
-  if (!spec || course === COURSE_FREESTYLE) return [];
-
-  var gates = [];
-  var spacing = course === COURSE_TREE ? 22 : 18;
-  var count = Math.floor(COURSE_LENGTH / spacing);
-  for (var i = 0; i < count; i++) {
-    var sway = Math.sin(i * 0.9) * 16 + (rand01(i, 0, 11) - 0.5) * 8;
-    gates.push({
-      index: i,
-      x: spec.x + sway,
-      y: SIGN_ROW + 40 + i * spacing,
-      halfWidth: course === COURSE_TREE ? 4.5 : 5.5
-    });
-  }
-  return gates;
-}
-
-// ---------------------------------------------------------------------------
 // The object field
 // ---------------------------------------------------------------------------
 
 var SOLID = "solid";       // crash into it
-var JUMPABLE = "jump";     // launches you
+var JUMPABLE = "jump";     // launches you (the rainbow ramp)
+var BUMP = "bump";         // rattles you and scrubs speed (moguls)
 var DECOR = "decor";       // pure scenery
 
 function obstacle(kind, sprite, x, y, extra) {
@@ -192,7 +149,7 @@ function inStartClearing(x, y) {
 
 // Every object whose cell intersects the requested world rectangle. Cells
 // are keyed on wrapped coordinates so the field repeats with the world.
-function objectsIn(minX, minY, maxX, maxY, course) {
+function objectsIn(minX, minY, maxX, maxY) {
   var out = [];
   var cx0 = Math.floor(minX / CELL) - 1;
   var cx1 = Math.floor(maxX / CELL) + 1;
@@ -214,28 +171,32 @@ function objectsIn(minX, minY, maxX, maxY, course) {
 
       var pick = rand01(wx, wy, 4);
 
-      // Cumulative shares of the object mix. Tree Slalom is wall-to-wall
-      // timber; elsewhere the hill is varied.
-      var tree = course === COURSE_TREE ? 0.80 : 0.34;
-      var rock = tree + (course === COURSE_TREE ? 0.05 : 0.16);
+      // Cumulative shares of the object mix.
+      var tree = 0.36;
+      var rock = tree + 0.15;
       var mogul = rock + 0.24;
       var ramp = mogul + 0.08;
       var patch = ramp + 0.06;
-      var cloud = patch + 0.07;
+      var cloud = patch + 0.06;
 
       if (pick < tree) {
         var t = rand01(wx, wy, 5);
-        out.push(obstacle(SOLID,
-          t < 0.72 ? Sprites.TREE : t < 0.88 ? Sprites.TREE_BARE
-                                             : Sprites.TREE_BIG, x, y));
+        var sprite = t < 0.56 ? Sprites.TREE
+                   : t < 0.70 ? Sprites.TREE_BARE
+                   : t < 0.82 ? (rand01(wx, wy, 8) < 0.5
+                                 ? Sprites.TREE_DEAD_BIG_A
+                                 : Sprites.TREE_DEAD_BIG_B)
+                   : t < 0.94 ? Sprites.TREE_BIG
+                   : Sprites.TREE_XMAS_A + (hash2(wx, wy, 9) % 3);
+        out.push(obstacle(SOLID, sprite, x, y));
       } else if (pick < rock) {
         out.push(obstacle(SOLID, rand01(wx, wy, 6) < 0.6
                           ? Sprites.ROCK : Sprites.STUMP, x, y));
       } else if (pick < mogul) {
         var big = rand01(wx, wy, 7) < 0.45;
-        out.push(obstacle(JUMPABLE,
+        out.push(obstacle(BUMP,
                           big ? Sprites.MOGUL_LARGE : Sprites.MOGUL_SMALL,
-                          x, y, { power: big ? 0.75 : 0.5 }));
+                          x, y, { hard: big }));
       } else if (pick < ramp) {
         out.push(obstacle(JUMPABLE, Sprites.RAMP, x, y, { power: 1.0, ramp: true }));
       } else if (pick < patch) {
@@ -285,27 +246,23 @@ function createState() {
     airVy: 0,
     flipStage: -1,      // -1 = not flipping, else index into FLIP_FRAMES
     flipCount: 0,
+    jumpGrace: 0,       // just landed: the same lip cannot relaunch you
 
-    // Crash state.
+    // Mogul rattle.
+    bumpTimer: 0,
+    bumpCooldown: 0,
+
+    // Crash state. You stay down until a key gets you up.
     crashed: false,
-    crashTimer: 0,
+    crashTimer: 0,      // minimum time in the snow before a key works
     crashSprite: Sprites.CRASH_SIT,
+    crashWord: "OUCH!",
     graceTimer: 0,
 
     // Progress.
     distance: 0,        // metres travelled downhill, monotonic
     elapsed: 0,         // seconds
     style: 0,           // style points
-
-    // Course.
-    course: COURSE_NONE,
-    courseStarted: false,
-    courseFinished: false,
-    courseTime: 0,
-    gatesCleared: 0,
-    gatesMissed: 0,
-    nextGate: 0,
-    gateResults: [],    // one entry per judged gate: true cleared
 
     // Input.
     fast: false,
@@ -315,7 +272,7 @@ function createState() {
     // so the monster can enter from just off screen.
     viewAbove: 9,
 
-    // Dogs, snowboarders and other skiers sharing the hill.
+    // Dogs, deer, snowboarders and other skiers sharing the hill.
     critters: [],
     critterTimer: 0,
 
@@ -349,26 +306,25 @@ function step(state, dt, events) {
 
   if (state.eaten) {
     state.eatTimer += dt;
-    state.eatFrame = Math.min(Math.floor(state.eatTimer / 0.28),
+    state.eatFrame = Math.min(Math.floor(state.eatTimer / EAT_FRAME_SECONDS),
                               Sprites.YETI_EAT_FRAMES.length - 1);
-    if (state.eatTimer > 3.0) state.over = true;
+    if (state.eatTimer > EAT_TOTAL_SECONDS) state.over = true;
     return state;
   }
 
   if (state.crashed) {
-    state.crashTimer -= dt;
-    if (state.crashTimer <= 0) {
-      state.crashed = false;
-      state.heading = 0;
-      // You stand up inside the footprint of whatever felled you, so solids
-      // are ignored just long enough to push off clear of it.
-      state.graceTimer = CRASH_GRACE;
-    }
+    // Down in the snow. Nothing moves until a key picks you back up —
+    // the timer only meters the earliest moment that key can work.
+    if (state.crashTimer > 0) state.crashTimer -= dt;
+    stepCritters(state, dt, events);
     stepYeti(state, dt, events);
     return state;
   }
 
   if (state.graceTimer > 0) state.graceTimer -= dt;
+  if (state.jumpGrace > 0) state.jumpGrace -= dt;
+  if (state.bumpCooldown > 0) state.bumpCooldown -= dt;
+  if (state.bumpTimer > 0) state.bumpTimer -= dt;
 
   // --- movement ------------------------------------------------------------
   if (state.airborne) {
@@ -382,6 +338,7 @@ function step(state, dt, events) {
     if (state.height <= 0) {
       state.height = 0;
       state.airborne = false;
+      state.jumpGrace = LAND_GRACE;
       // Landing mid-rotation means eating snow.
       if (state.flipStage >= 0 && state.flipStage % Sprites.FLIP_FRAMES.length !== 0) {
         crash(state, Sprites.CRASH_SPRAWL, events);
@@ -418,19 +375,29 @@ function step(state, dt, events) {
   }
 
   // --- obstacles -----------------------------------------------------------
-  var near = objectsIn(state.x - 4, state.y - 4, state.x + 4, state.y + 4,
-                       state.course);
+  var near = objectsIn(state.x - 4, state.y - 4, state.x + 4, state.y + 4);
   for (var i = 0; i < near.length; i++) {
     var o = near[i];
     if (o.kind === DECOR || !hits(state.x, state.y, o)) continue;
 
     if (o.kind === JUMPABLE) {
-      if (!state.airborne) launch(state, o.power, events);
+      // The lip only bites moving skis, and never the pair you just
+      // landed on — that way a dead stop next to a ramp stays a stop.
+      if (!state.airborne && state.jumpGrace <= 0 && state.speed > 1.0) {
+        launch(state, o.power, events);
+      }
+    } else if (o.kind === BUMP) {
+      if (!state.airborne && state.graceTimer <= 0
+          && state.bumpCooldown <= 0 && state.speed > 1.0) {
+        state.speed *= o.hard ? BUMP_SLOW * 0.85 : BUMP_SLOW;
+        state.bumpTimer = BUMP_SECONDS;
+        state.bumpCooldown = BUMP_COOLDOWN;
+        if (events) events.push("bump");
+      }
     } else if (state.graceTimer <= 0
                && (!state.airborne || state.height < 0.6)) {
       // Enough air sails over anything; a low hop still clips the trunk.
-      crash(state, o.sprite === Sprites.ROCK || o.sprite === Sprites.STUMP
-            ? Sprites.CRASH_SIT : Sprites.CRASH_OUCH, events);
+      crash(state, Sprites.CRASH_SIT, events);
       break;
     }
   }
@@ -440,7 +407,6 @@ function step(state, dt, events) {
     state.style += dt * 12 * (1 + state.height * 0.4);
   }
 
-  stepCourse(state, dt, events);
   stepCritters(state, dt, events);
   stepYeti(state, dt, events);
   return state;
@@ -461,81 +427,51 @@ function launch(state, power, events) {
 
 function crash(state, sprite, events) {
   state.crashed = true;
-  state.crashTimer = CRASH_SECONDS;
+  state.crashTimer = CRASH_MIN_SECONDS;
   state.crashSprite = sprite;
+  state.crashWord = Sprites.CRASH_WORDS[
+    Math.floor(Math.random() * Sprites.CRASH_WORDS.length)];
   state.airborne = false;
   state.height = 0;
   state.vertical = 0;
   state.flipStage = -1;
+  state.bumpTimer = 0;
   state.heading = 0;
   state.speed = 0;       // momentum is gone; you push off from a standstill
   if (events) events.push("crash");
 }
 
-// ---------------------------------------------------------------------------
-// Courses
-// ---------------------------------------------------------------------------
-
-function stepCourse(state, dt, events) {
-  if (state.course === COURSE_NONE) {
-    // Crossing the sign row picks the course whose lane you are in.
-    if (state.y > SIGN_ROW + 8) {
-      var best = null, bestDist = 1e9;
-      for (var i = 0; i < COURSES.length; i++) {
-        var d = Math.abs(state.x - COURSES[i].x);
-        if (d < bestDist) { bestDist = d; best = COURSES[i]; }
-      }
-      if (best && bestDist < 22) {
-        state.course = best.id;
-        state.courseStarted = true;
-        state.courseTime = 0;
-        state.nextGate = 0;
-        state.gateResults = [];
-        if (events) events.push("course:" + best.id);
-      }
-    }
+// A key press picks the skier up, once the minimum sit is served.
+function getUp(state) {
+  if (!state.crashed) return;
+  if (state.crashTimer > 0) {
+    // Wiggling the controls shaves the sit a little.
+    state.crashTimer -= 0.15;
     return;
   }
-
-  if (state.courseFinished || state.course === COURSE_FREESTYLE) return;
-
-  state.courseTime += dt;
-
-  var gates = gatesFor(state.course);
-  while (state.nextGate < gates.length && state.y > gates[state.nextGate].y + 1) {
-    var g = gates[state.nextGate];
-    var cleared = Math.abs(state.x - g.x) <= g.halfWidth;
-    state.gateResults[state.nextGate] = cleared;
-    if (cleared) {
-      state.gatesCleared++;
-      state.style += 25;
-      if (events) events.push("gate-clear");
-    } else {
-      state.gatesMissed++;
-      if (events) events.push("gate-miss");
-    }
-    state.nextGate++;
-  }
-
-  if (state.nextGate >= gates.length && gates.length > 0) {
-    state.courseFinished = true;
-    if (events) events.push("finish");
-  }
+  state.crashed = false;
+  state.heading = 0;
+  // You stand up inside the footprint of whatever felled you, so solids
+  // are ignored just long enough to push off clear of it.
+  state.graceTimer = CRASH_GRACE;
 }
 
 // ---------------------------------------------------------------------------
-// Dogs, snowboarders and other skiers
+// Dogs, deer, snowboarders and other skiers
 // ---------------------------------------------------------------------------
-// A few wandering characters share the hill. They are hazards: run into one
-// and you both go down. They spawn just off the top of the view and retire
-// once they fall well behind.
+// A few wandering characters share the hill. Boarders and rival skiers are
+// hazards: run into one and you both go down. Dogs trot straight across the
+// slope and bark when you get close. Deer cross too — but hitting a deer
+// hurts only the deer, spectacularly.
 
 var CRITTER_DOG = "dog";
 var CRITTER_BOARDER = "boarder";
 var CRITTER_SKIER = "skier";
+var CRITTER_DEER = "deer";
 
-var MAX_CRITTERS = 4;
-var CRITTER_INTERVAL = 3.2;   // seconds between spawn attempts
+var MAX_CRITTERS = 5;
+var CRITTER_INTERVAL = 3.0;   // seconds between spawn attempts
+var DOG_BARK_RANGE = 7;       // metres at which the dog starts woofing
 
 var CRASH_POSE = {};
 CRASH_POSE[CRITTER_DOG] = Sprites.CRASH_SIT;
@@ -544,20 +480,34 @@ CRASH_POSE[CRITTER_SKIER] = Sprites.CRASH_TANGLE;
 
 function spawnCritter(state) {
   var roll = Math.random();
-  var kind = roll < 0.4 ? CRITTER_DOG
-           : roll < 0.75 ? CRITTER_BOARDER
-           : CRITTER_SKIER;
-  state.critters.push({
+  var kind = roll < 0.28 ? CRITTER_DOG
+           : roll < 0.55 ? CRITTER_BOARDER
+           : roll < 0.75 ? CRITTER_SKIER
+           : CRITTER_DEER;
+  var above = (state.viewAbove > 0 ? state.viewAbove : 9) + 2;
+  var c = {
     kind: kind,
     x: state.x + (Math.random() - 0.5) * 28,
-    y: state.y - (state.viewAbove > 0 ? state.viewAbove : 9) - 2,
+    y: state.y - above,
     vx: (Math.random() - 0.5) * 4,
-    vy: kind === CRITTER_DOG ? 2.5 : kind === CRITTER_BOARDER ? 11.0 : 9.0,
+    vy: kind === CRITTER_BOARDER ? 11.0 : 9.0,
     frame: 0,
     timer: 0,
+    bark: false,
+    splat: false,
     down: false,
     downTimer: 0
-  });
+  };
+  if (kind === CRITTER_DOG || kind === CRITTER_DEER) {
+    // Crossers: strong sideways motion, starting off to one side so the
+    // walk carries them across the skier's path.
+    var dir = Math.random() < 0.5 ? -1 : 1;
+    c.vx = dir * (kind === CRITTER_DEER ? 6 + Math.random() * 3
+                                        : 3.5 + Math.random() * 1.5);
+    c.vy = kind === CRITTER_DEER ? 1.2 : 0.8;
+    c.x = state.x - dir * (10 + Math.random() * 10);
+  }
+  state.critters.push(c);
 }
 
 function stepCritters(state, dt, events) {
@@ -574,35 +524,56 @@ function stepCritters(state, dt, events) {
 
     if (c.down) {
       c.downTimer -= dt;
-      if (c.downTimer <= 0) c.down = false;
+      if (c.downTimer <= 0) {
+        if (c.splat) continue;          // what's left soaks into the snow
+        c.down = false;
+      }
     } else {
       c.x = wrap(c.x + c.vx * dt);
       c.y = wrap(c.y + c.vy * dt);
-      // Dogs wander, so nudge their heading now and then.
-      if (c.kind === CRITTER_DOG && Math.floor(c.timer * 2) % 7 === 0) {
-        c.vx = Math.max(-3, Math.min(3, c.vx + (Math.random() - 0.5) * 1.5));
-      }
       c.frame = Math.floor(c.timer / 0.16);
+
+      var dx = wrap(state.x - c.x);
+      var dy = wrap(state.y - c.y);
+      if (c.kind === CRITTER_DOG) {
+        c.bark = Math.abs(dx) < DOG_BARK_RANGE && Math.abs(dy) < DOG_BARK_RANGE;
+      }
 
       if (!state.crashed && !state.airborne && !state.eaten
           && state.graceTimer <= 0
-          && Math.abs(wrap(state.x - c.x)) < 1.0
-          && Math.abs(wrap(state.y - c.y)) < 0.9) {
+          && Math.abs(dx) < (c.kind === CRITTER_DEER ? 1.4 : 1.0)
+          && Math.abs(dy) < 0.9) {
         c.down = true;
-        c.downTimer = 1.6;
-        crash(state, CRASH_POSE[c.kind] || Sprites.CRASH_SIT, events);
+        if (c.kind === CRITTER_DEER) {
+          // The deer bursts; the skier sails on through.
+          c.splat = true;
+          c.downTimer = 2.0;
+          state.style += 50;
+          if (events) events.push("deer");
+        } else {
+          c.downTimer = 1.6;
+          crash(state, CRASH_POSE[c.kind] || Sprites.CRASH_SIT, events);
+        }
       }
     }
 
-    if (wrap(state.y - c.y) < 60) kept.push(c);
+    if (wrap(state.y - c.y) < 60 && Math.abs(wrap(state.x - c.x)) < 70) {
+      kept.push(c);
+    }
   }
   state.critters = kept;
 }
 
 // The sprite for a critter right now, as [spriteId, mirrored].
 function critterSprite(c) {
+  if (c.kind === CRITTER_DEER) {
+    if (c.splat) return [c.downTimer > 1.2 ? Sprites.DEER_SPLAT_A
+                                           : Sprites.DEER_SPLAT_B, false];
+    return [Sprites.DEER_FRAMES[c.frame % 2], c.vx < 0];
+  }
   if (c.kind === CRITTER_DOG) {
-    var frames = c.down ? Sprites.DOG_BARK_FRAMES : Sprites.DOG_FRAMES;
+    var frames = (c.down || c.bark) ? Sprites.DOG_BARK_FRAMES
+                                    : Sprites.DOG_FRAMES;
     return [frames[c.frame % 2], c.vx < 0];
   }
   if (c.kind === CRITTER_BOARDER) {
@@ -685,7 +656,7 @@ function stepYeti(state, dt, events) {
     y.y = wrap(y.y + dy / dist * YETI_SPEED * dt);
   }
 
-  y.frame = Math.floor(y.timer / 0.11) % Sprites.YETI_RUN_FRAMES.length;
+  y.frame = Math.floor(y.timer / 0.09) % Sprites.YETI_RUN_FRAMES.length;
   y.mode = dist < 3.5 ? "leap" : "chase";
 
   // He cannot grab you out of the air.
@@ -704,8 +675,7 @@ function stepYeti(state, dt, events) {
 function turn(state, delta) {
   if (state.eaten || state.over) return;
   if (state.crashed) {
-    // Wiggling the controls gets you back on your feet faster.
-    state.crashTimer = Math.max(0, state.crashTimer - 0.25);
+    getUp(state);
     return;
   }
   if (state.airborne) {
@@ -726,11 +696,12 @@ function setHeading(state, heading) {
 }
 
 function jump(state, events) {
-  if (state.crashed || state.eaten || state.over) return;
-  if (state.airborne) {
-    turn(state, 1);   // advance the flip
+  if (state.eaten || state.over) return;
+  if (state.crashed) {
+    getUp(state);
     return;
   }
+  if (state.airborne) return;   // holding the key must not thrash the pose
   launch(state, 0.55, events);
 }
 
@@ -744,8 +715,10 @@ function skierSprite(state) {
       return [Sprites.FLIP_FRAMES[state.flipStage % Sprites.FLIP_FRAMES.length],
               false];
     }
-    return [state.height > 1.2 ? Sprites.JUMP_HIGH_L : Sprites.JUMP_LOW, false];
+    return [Sprites.JUMP_V, false];
   }
+
+  if (state.bumpTimer > 0) return [Sprites.SKIER_BUMP, false];
 
   if (state.climbing !== 0) {
     var walk = Math.floor(state.elapsed * 6) % 2 === 0;

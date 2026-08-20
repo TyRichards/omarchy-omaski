@@ -18,12 +18,14 @@ for layout and collision. Only Python's standard library is required:
 """
 
 import argparse
+import math
 import os
 import struct
 import zlib
 
 # ---------------------------------------------------------------------------
-# Palette: the 16 PICO-8 colours, one character each
+# Palette: the 16 PICO-8 colours, one character each — plus "G", the official
+# Omarchy green (#9ECE6A from omarchy.org), used only in the title logo.
 # ---------------------------------------------------------------------------
 # '.' (and ' ') are transparent.
 
@@ -44,29 +46,29 @@ PALETTE = {
     "l": (0x83, 0x76, 0x9C, 255),   # 13 indigo
     "m": (0xFF, 0x77, 0xA8, 255),   # 14 pink
     "f": (0xFF, 0xCC, 0xAA, 255),   # 15 peach
+    "G": (0x9E, 0xCE, 0x6A, 255),   # Omarchy green
 }
 
 # Sprite canvas sizes, kept identical to game/Sprites.js. At 8 px/metre these
 # give every object the same world-space footprint the classic had at 16.
 SIZES = {
-    1: (8, 16), 2: (8, 16), 3: (12, 14), 4: (12, 14), 5: (8, 16),
-    6: (12, 14), 7: (12, 14), 8: (12, 14), 9: (12, 14), 10: (12, 14),
-    11: (12, 14), 12: (16, 16), 13: (16, 12), 14: (16, 16), 15: (14, 16),
+    1: (10, 16), 2: (16, 18), 3: (18, 15), 4: (16, 16), 5: (16, 18),
+    6: (18, 15), 7: (16, 16), 8: (12, 15), 9: (12, 15), 10: (12, 15),
+    11: (12, 15), 12: (28, 18), 13: (16, 14), 14: (14, 18), 15: (14, 16),
     16: (14, 16), 17: (14, 17), 18: (16, 13), 19: (16, 16), 20: (16, 12),
-    21: (13, 16), 22: (13, 16), 23: (6, 12), 24: (6, 12), 25: (6, 12),
-    26: (6, 12), 27: (32, 16), 28: (12, 15), 29: (11, 15), 30: (11, 15),
-    31: (12, 12), 32: (12, 12), 33: (11, 8), 34: (11, 8), 35: (10, 10),
-    36: (10, 10), 37: (13, 15), 38: (10, 15), 39: (13, 16), 40: (15, 15),
-    41: (16, 16), 42: (16, 16), 43: (13, 15), 44: (15, 13), 45: (12, 6),
-    46: (8, 6), 47: (8, 3), 48: (12, 4), 49: (14, 16), 50: (11, 14),
-    51: (16, 32), 52: (16, 6), 53: (120, 64), 54: (44, 7), 55: (72, 14),
-    56: (44, 22), 57: (22, 14), 58: (24, 15), 59: (26, 15), 60: (28, 15),
-    61: (27, 18), 62: (29, 18), 63: (25, 18), 64: (12, 32), 65: (13, 16),
-    66: (13, 16), 67: (13, 16), 68: (16, 24), 69: (16, 24), 70: (16, 24),
-    71: (16, 24), 72: (16, 24), 73: (16, 24), 74: (16, 24), 75: (16, 24),
-    76: (16, 24), 77: (16, 24), 78: (16, 24), 79: (16, 24), 80: (16, 24),
-    81: (16, 24), 82: (8, 4), 83: (11, 14), 84: (11, 14), 85: (11, 14),
-    86: (4, 6), 87: (14, 16), 88: (14, 16), 89: (14, 16),
+    21: (13, 16), 22: (13, 16), 27: (32, 16), 28: (12, 12), 29: (12, 12),
+    30: (12, 12), 31: (12, 12), 32: (12, 12), 33: (11, 8), 34: (11, 8),
+    35: (10, 10), 36: (10, 10), 37: (13, 15), 38: (10, 15), 39: (13, 16),
+    40: (15, 15), 41: (16, 16), 42: (16, 16), 43: (13, 15), 44: (15, 13),
+    45: (12, 6), 46: (8, 6), 47: (8, 3), 48: (12, 4), 49: (14, 16),
+    50: (11, 14), 51: (16, 32), 52: (16, 6), 53: (120, 44), 54: (44, 7),
+    55: (72, 14), 56: (52, 22), 64: (12, 32), 65: (13, 16), 66: (13, 16),
+    67: (13, 16), 68: (16, 24), 69: (16, 24), 70: (16, 24), 71: (16, 24),
+    72: (16, 24), 73: (16, 24), 74: (16, 24), 75: (16, 24), 76: (16, 24),
+    77: (16, 24), 78: (16, 24), 79: (16, 24), 80: (16, 24), 81: (16, 24),
+    82: (8, 4), 83: (11, 14), 84: (11, 14), 85: (11, 14), 86: (4, 6),
+    87: (14, 16), 88: (14, 16), 89: (14, 16), 90: (18, 12), 91: (18, 12),
+    92: (18, 12), 93: (18, 12), 94: (16, 28), 95: (16, 28), 96: (18, 16),
 }
 
 # ---------------------------------------------------------------------------
@@ -138,9 +140,26 @@ def ellipse(dst, cx, cy, rx, ry, c):
     return dst
 
 
+def rim(dst, body, edge):
+    """Outline every `body` pixel that touches transparency with `edge`."""
+    h, w = len(dst), len(dst[0])
+    out = [row[:] for row in dst]
+    for y in range(h):
+        for x in range(w):
+            if dst[y][x] != body:
+                continue
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
+                    ny, nx = y + dy, x + dx
+                    if not (0 <= ny < h and 0 <= nx < w) or dst[ny][nx] == ".":
+                        out[y][x] = edge
+    return out
+
+
 # ---------------------------------------------------------------------------
 # The PICO-8 system font (released CC-0 by Lexaloffle): 3x5 glyphs on a
-# 4-pixel advance. Keep this table in step with game/Font.js.
+# 4-pixel advance. Keep this table in step with game/Font.js. "❎" and "Ⓞ"
+# stand in for the PICO-8 controller buttons.
 # ---------------------------------------------------------------------------
 
 FONT = {
@@ -166,6 +185,10 @@ FONT = {
     "-": "... ... ### ... ...", "=": "... ### ... ### ...",
     ".": ". . . . #", "!": "# # # . #", ":": ". # . # .",
     "/": "..# .#. .#. .#. #..", " ": ".. .. .. .. ..",
+    "%": "#.# ..# .#. #.. #.#", "*": "#.# .#. #.# ... ...",
+    "@": ".## #.# ### #.. .##",
+    "❎": "#...# .#.#. ..#.. .#.#. #...#",
+    "Ⓞ": ".###. #...# #...# #...# .###.",
 }
 
 
@@ -192,28 +215,6 @@ def draw_text(dst, x, y, s, colour, scale=1):
                 fill_rect(dst, cx + i * scale, y + j * scale,
                           cx + (i + 1) * scale, y + (j + 1) * scale, colour)
         cx += (len(rows[0]) + 1) * scale
-    return dst
-
-
-def sign(w, h, lines, post_h=4, scale=1, board="w", ink="k"):
-    """A bordered signboard on two posts, with centred lines of text."""
-    dst = canvas(w, h)
-    bh = h - post_h
-    fill_rect(dst, 0, 0, w, bh, board)
-    for x in range(w):
-        dst[0][x] = "k"
-        dst[bh - 1][x] = "k"
-    for y in range(bh):
-        dst[y][0] = "k"
-        dst[y][w - 1] = "k"
-    fill_rect(dst, 2, bh, 4, h, "B")
-    fill_rect(dst, w - 4, bh, w - 2, h, "B")
-    line_h = 5 * scale + 2
-    total = len(lines) * line_h - 2
-    y = max(2, (bh - total) // 2)
-    for ln in lines:
-        draw_text(dst, (w - text_width(ln, scale)) // 2, y, ln, ink, scale)
-        y += line_h
     return dst
 
 
@@ -258,127 +259,144 @@ def sprite(sid):
 
 
 # --- the skier -------------------------------------------------------------
-# Red cap, blue jacket, dark-blue trousers, black skis, grey poles.
+# Red beanie with a bobble on top, blue jacket, dark-blue trousers, black
+# skis, grey poles. Every pose is built symmetric: 2px arms, 2px legs,
+# 2px skis, a straight waist rather than an hourglass — and the poles track
+# the skis: straight back when pointing downhill, flared 30 degrees on a
+# gentle turn, trailing parallel behind the skis on a hard traverse.
 
 SKIER_DOWN = """
-..rrrr..
-..rrrr..
-..ffff..
-.bbbbbb.
-d.bbbb.d
-d.bbbb.d
-d.bbbb.d
-d..bb..d
-..nnnn..
-..nnnn..
-.nn..nn.
-.nn..nn.
-.kk..kk.
-.kk..kk.
-.kk..kk.
-.kk..kk.
+....rr....
+d..rrrr..d
+d..rrrr..d
+d..ffff..d
+d.bbbbbb.d
+dd.bbbb.dd
+dd.bbbb.dd
+dd.bbbb.dd
+..bbbbbb..
+...nnnn...
+...nnnn...
+..nn..nn..
+..nn..nn..
+..kk..kk..
+..kk..kk..
+..kk..kk..
 """
 
 
 @sprite(1)
 def _skier_down():
-    return place(SKIER_DOWN, 8, 16)
+    return place(SKIER_DOWN, 10, 16)
 
 
+# One notch off straight: skis run long, tails peeking behind the boots and
+# tips stepping out ahead; the poles flare out and down at 30 degrees.
 SKIER_DIAG_R = """
-...rrrr.
-...rrrr.
-...ffff.
-..bbbbb.
-.d.bbbb.
-.d.bbbbd
-.d.bbb.d
-....bb.d
-...nnnn.
-...nnnn.
-..nn.nn.
-..nn.nn.
-.kk..kk.
-.kk..kk.
-..kk..kk
-..kk..kk
+.......rr.......
+......rrrr......
+......rrrr......
+......ffff......
+.....bbbbbb.....
+...dd.bbbb.dd...
+...dd.bbbb.dd...
+...dd.bbbb.dd...
+..dd.bbbbbb.dd..
+dd....nnnn....dd
+......nnnn......
+.....nn..nn.....
+....knn.knn.....
+.....kk..kk.....
+.....kk..kk.....
+......kk..kk....
+......kk..kk....
+.......kk..kk...
 """
 
 
 @sprite(2)
 def _skier_diag_r():
-    return place(SKIER_DIAG_R, 8, 16)
+    return place(SKIER_DIAG_R, 16, 18)
 
 
 @sprite(5)
 def _skier_diag_l():
-    return mirror(place(SKIER_DIAG_R, 8, 16))
+    return mirror(place(SKIER_DIAG_R, 16, 18))
 
 
+# Two notches: a hard traverse. Arms tucked against the body, long staggered
+# skis carving across the hill, both poles streaming out behind, parallel
+# with the skis.
 SKIER_TRAV_R = """
-....rrrr....
-....rrff....
-...bbbbbb...
-.d.bbbbb.d..
-.d.bbbbb.d..
-.d.bbbbb.d..
-.d..bbb..d..
-....nnnn....
-...nnnnn....
-...nn.nn....
-...nn.nn....
-..knnknnk...
-.kkkkkkk....
-....kkkkkkk.
+.......rr.........
+......rrrr........
+......rrrr........
+......ffff........
+dd...bbbbbb.......
+..ddddbbbbdd......
+dd..ddbbbbdd......
+..ddddbbbbdd......
+......bbbb........
+......nnnn........
+.....nn.nn........
+.....nn.nn........
+....knnknnk.......
+.kkkkkkkkkkkk.....
+....kkkkkkkkkkkk..
 """
 
 
 @sprite(3)
 def _skier_trav_r():
-    return place(SKIER_TRAV_R, 12, 14)
+    return place(SKIER_TRAV_R, 18, 15)
 
 
 @sprite(6)
 def _skier_trav_l():
-    return mirror(place(SKIER_TRAV_R, 12, 14))
+    return mirror(place(SKIER_TRAV_R, 18, 15))
 
 
+# Skis planted fully across the fall line: stopped. Two long level skis with
+# daylight between them, poles planted in the snow.
 SKIER_SIDE_R = """
-....rrrr....
-....rrff....
-....bbbb....
-..d.bbbb.d..
-..d.bbbb.d..
-..d.bbbb.d..
-..d..bb..d..
-....nnnn....
-...nnnnn....
-...nn.nn....
-...nn.nn....
-..knnknnk...
-kkkkkkkkkkkk
-.kkkkkkkkkk.
+......rr........
+.....rrrr.......
+.....rrrr.......
+.....ffff.......
+....bbbbbb......
+...ddbbbbdd.....
+...ddbbbbdd.....
+...ddbbbbdd.....
+...d.bbbb.d.....
+...d.nnnn.d.....
+...dnn.nn.d.....
+...dnn.nn.d.....
+...knnknnk......
+..kkkkkkkkkkkkkk
+................
+.kkkkkkkkkkkkkk.
 """
 
 
 @sprite(4)
 def _skier_side_r():
-    return place(SKIER_SIDE_R, 12, 14)
+    return place(SKIER_SIDE_R, 16, 16)
 
 
 @sprite(7)
 def _skier_side_l():
-    return mirror(place(SKIER_SIDE_R, 12, 14))
+    return mirror(place(SKIER_SIDE_R, 16, 16))
 
 
 SKIER_STEP_L = """
+.....rr.....
 ....rrrr....
 ....ffrr....
 ....bbbb....
-..d.bbbb.d..
-..d.bbbb.d..
-..d.bbbb.d..
-..d..bb..d..
+..ddbbbbdd..
+..ddbbbbdd..
+..ddbbbbdd..
+....bbbb....
 ....nnn.....
 ...nnnnn....
 ...nn..nn...
@@ -391,22 +409,23 @@ kkkkkk.kkkkk
 
 @sprite(8)
 def _skier_step_l():
-    return place(SKIER_STEP_L, 12, 14)
+    return place(SKIER_STEP_L, 12, 15)
 
 
 @sprite(9)
 def _skier_step_r():
-    return mirror(place(SKIER_STEP_L, 12, 14))
+    return mirror(place(SKIER_STEP_L, 12, 15))
 
 
 SKIER_CLIMB_L = """
+.....rr.....
 ....rrrr....
 ....ffrr....
 ....bbbb....
-..d.bbbb.d..
-..d.bbbb.d..
-..d.bbbb.d..
-..d..bb..d..
+..ddbbbbdd..
+..ddbbbbdd..
+..ddbbbbdd..
+....bbbb....
 ....nnn.....
 ...nnnnn....
 ...nn.nn....
@@ -419,76 +438,58 @@ SKIER_CLIMB_L = """
 
 @sprite(10)
 def _skier_climb_l():
-    return place(SKIER_CLIMB_L, 12, 14)
+    return place(SKIER_CLIMB_L, 12, 15)
 
 
 @sprite(11)
 def _skier_climb_r():
-    return mirror(place(SKIER_CLIMB_L, 12, 14))
+    return mirror(place(SKIER_CLIMB_L, 12, 15))
 
 
 # --- crashes ---------------------------------------------------------------
 
 
 @sprite(12)
-def _crash_ouch():
-    star = """
-.......yy.......
-.y.....yy.....y.
-.yy...yyyy...yy.
-..yy..yyyy..yy..
-...yyyyyyyyyy...
-..yyyyyyyyyyyy..
-.yyyyyyyyyyyyyy.
-yyyyyyyyyyyyyyyy
-yyyyyyyyyyyyyyyy
-.yyyyyyyyyyyyyy.
-..yyyyyyyyyyyy..
-...yyyyyyyyyy...
-..yy..yyyy..yy..
-.yy...yyyy...yy.
-.y.....yy.....y.
-.......yy.......
-"""
-    dst = place(star, 16, 16, anchor="center")
-    dst = rim(dst, "y", "r")
-    draw_text(dst, 4, 6, "OW!", "k")
-    return dst
+def _crash_burst():
+    # A proper comic-book starburst: nine spikes around a fat yellow core
+    # with a red rim. The crash word is drawn over it at runtime, so the
+    # game can swap OUCH! for something saltier.
+    dst = canvas(28, 18)
+    cx, cy = 13.5, 8.5
+    for y in range(18):
+        for x in range(28):
+            dx, dy = (x - cx) / 1.55, (y - cy)
+            r = math.hypot(dx, dy)
+            a = math.atan2(dy, dx)
+            edge = 4.3 + 4.6 * abs(math.cos(a * 4.5)) ** 1.6
+            if r <= edge:
+                dst[y][x] = "y"
+    return rim(dst, "y", "r")
 
 
-def rim(dst, body, edge):
-    """Outline every `body` pixel that touches transparency with `edge`."""
-    h, w = len(dst), len(dst[0])
-    out = [row[:] for row in dst]
-    for y in range(h):
-        for x in range(w):
-            if dst[y][x] != body:
-                continue
-            for dy in (-1, 0, 1):
-                for dx in (-1, 0, 1):
-                    ny, nx = y + dy, x + dx
-                    if not (0 <= ny < h and 0 <= nx < w) or dst[ny][nx] == ".":
-                        out[y][x] = edge
-    return out
-
-
+# Down in the snow: skis stuck upright in an upside-down V, poles leaning
+# beside them, the skier sat between — /\O/\.
 CRASH_SIT = """
-.....rrrr.......
-.....ffrr.......
-....bbbbb.......
-...bbbbbbb.d....
-....bbbbb..d....
-...nnnnnnn.d....
-..nnnnnnnnnd....
-.kk.nnnnn.kk....
-kkk.w..w..kkk...
-.k..ww.ww..k....
+.......kk.......
+......k..k......
+.....k....k.....
+....k......k....
+...k..rr....k...
+.dk..rrrr..kd...
+.d...rrrr...d...
+..d..ffff..d....
+..d.bbbbbb.d....
+...dbbbbbbd.....
+...bbbbbbbb.....
+..nnnnnnnnnn....
+..nnnnnnnnnn....
+.ww........ww...
 """
 
 
 @sprite(13)
 def _crash_sit():
-    return place(CRASH_SIT, 16, 12)
+    return place(CRASH_SIT, 16, 14)
 
 
 CRASH_SPRAWL = """
@@ -503,6 +504,7 @@ CRASH_SPRAWL = """
 ..ffbbbbbbbbff..
 .....rrrr.ww....
 .....rrrrww.....
+......rr........
 """
 
 
@@ -552,11 +554,11 @@ def _crash_tangle():
 
 
 GETTING_UP_L = """
+......rr.....
 .....rrrr....
 .....ffrr....
 .....bbbb....
 ...d.bbbb....
-...d.bbbb.d..
 ...d.bbbb.d..
 ...d..bb..d..
 ....nnnnn.d..
@@ -581,26 +583,33 @@ def _getting_up_r():
 
 # --- airborne and tricks ---------------------------------------------------
 
-JUMP_LOW = """
-.....rrrr.......
-.....rrrr.......
-.....ffff.......
-.d..bbbbbb..d...
-..d.bbbbbb.d....
-..d.bbbbbb.d....
-...dbbbbbd......
-....nnnn........
-...nnnnnn.......
-...nn..nn.......
-..knnk.knnk.....
-.kkkkkkkkkkkkk..
-kkkkkkkkkkkkk...
+# The plain jump: skis in a flying V — tips up and spread wide, tails
+# crossing under the boots like a loose X.
+JUMP_BODY = """
+....rr....
+...rrrr...
+...rrrr...
+...ffff...
+dd.bbbb.dd
+.ddbbbbdd.
+..bbbbbb..
+..bbbbbb..
+...nnnn...
+..nn..nn..
+..nn..nn..
 """
 
 
 @sprite(14)
-def _jump_low():
-    return place(JUMP_LOW, 16, 16, anchor="center")
+def _jump_v():
+    dst = canvas(14, 18)
+    for r in range(18):
+        off = int(r * 0.5 + 0.5)
+        for x in (off, off + 1, 12 - off, 13 - off):
+            if 0 <= x < 14:
+                dst[r][x] = "k"
+    blit(dst, grid(JUMP_BODY), 2, 1)
+    return dst
 
 
 JUMP_HIGH_L = """
@@ -650,53 +659,31 @@ def _jump_tuck():
     return place(JUMP_TUCK, 14, 17, anchor="center")
 
 
-# --- slalom flags and gate markers ----------------------------------------
-
-
-@sprite(23)
-def _flag_left():
-    art = """
-rrrr..
-rrrrk.
-.rrkk.
-...kk.
-...kk.
-...kk.
-...kk.
-...kk.
-...kk.
-...kk.
-..dkkd
+# Rattled over a mogul: everything fans out into an X — arms and poles
+# thrown up in a V, skis splayed into a perfect upside-down V below.
+SKIER_BUMP = """
+d................d
+.dd............dd.
+..dd....rr....dd..
+...bb..rrrr..bb...
+....bb.rrrr.bb....
+.....b.ffff.b.....
+.....bbbbbbbb.....
+......bbbbbb......
+......bbbbbb......
+.......nnnn.......
+......nn..nn......
+.....nn....nn.....
+....kkk....kkk....
+...kkk......kkk...
+..kkk........kkk..
+.kk............kk.
 """
-    return place(art, 6, 12)
 
 
-@sprite(24)
-def _flag_right():
-    return mirror(_flag_left())
-
-
-def gate_face(colour, happy):
-    dst = canvas(6, 12)
-    fill_rect(dst, 2, 5, 4, 12, "d")
-    fill_rect(dst, 0, 0, 6, 6, colour)
-    dst[0][0] = dst[0][5] = dst[5][0] = dst[5][5] = "."
-    dst[1][1] = dst[1][4] = "k"
-    if happy:
-        dst[3][1] = dst[4][2] = dst[4][3] = dst[3][4] = "k"
-    else:
-        dst[4][1] = dst[3][2] = dst[3][3] = dst[4][4] = "k"
-    return dst
-
-
-@sprite(25)
-def _gate_green():
-    return gate_face("g", True)
-
-
-@sprite(26)
-def _gate_red():
-    return gate_face("r", False)
+@sprite(96)
+def _skier_bump():
+    return place(SKIER_BUMP, 18, 16)
 
 
 # --- scenery ---------------------------------------------------------------
@@ -712,19 +699,22 @@ def _cloud():
     return dst
 
 
+# Three clean stacked triangles, dark-shaded on the right, with snow caught
+# on the left edges of each tier.
 TREE = """
 ......ww......
-......gg......
 .....gggg.....
-.....ggge.....
 ....ggggee....
+...wggggeee...
+.....ggee.....
 ....gggeee....
-...gggggeee...
+...ggggeeee...
+..wggggeeeee..
+....gggee.....
 ...ggggeeee...
 ..gggggeeeee..
-..ggggeeeeee..
-.gggggeeeeeee.
-.ggggggeeeeee.
+.wggggeeeeeee.
+ggggggeeeeeeee
 ......BB......
 ......BB......
 .....BBBB.....
@@ -756,27 +746,29 @@ def _tree_bare():
     return place(TREE_BARE, 11, 14)
 
 
+# Four tiers for the tall pine.
 TREE_BIG = """
 .......ww.......
-.......gg.......
 ......gggg......
-......ggge......
-.....gggeee.....
 .....ggggee.....
-....gggggeee....
-....ggggeeee....
+....wggggeee....
+......ggee......
 .....gggeee.....
 ....ggggeeee....
 ...gggggeeeee...
-...ggggeeeeee...
-..gggggeeeeeee..
-.....ggggeee....
-....gggggeeee...
-...ggggggeeeee..
-..gggggggeeeeee.
-..ggggggeeeeeee.
-.gggggggeeeeeeee
-.ggggggggeeeeeee
+..wggggeeeeeee..
+.....gggee......
+....ggggeeee....
+...gggggeeeee...
+..ggggggeeeeee..
+.wgggggeeeeeeee.
+.....ggggee.....
+....gggggeee....
+...ggggggeeee...
+..gggggggeeeee..
+.gggggggeeeeeee.
+ggggggggeeeeeeee
+......BBBB......
 ......BBBB......
 ......BBBB......
 ......BBBB......
@@ -791,9 +783,10 @@ def _tree_big():
 
 def xmas_tree(a, b, c):
     dst = place(TREE, 14, 16)
-    for x, y, ch in ((6, 4, a), (8, 7, b), (4, 9, c), (9, 11, a), (3, 12, b)):
+    for x, y, ch in ((6, 4, a), (8, 6, b), (4, 9, c), (9, 11, a), (3, 12, b)):
         if dst[y][x] != ".":
             dst[y][x] = ch
+    dst[0][6] = dst[0][7] = "y"
     dst[1][6] = dst[1][7] = "y"
     return dst
 
@@ -811,6 +804,49 @@ def _xmas_b():
 @sprite(89)
 def _xmas_c():
     return xmas_tree("b", "r", "y")
+
+
+# A big dead snag: bare gnarled crown, tall trunk with broken branch stubs.
+TREE_DEAD_BIG = """
+.B.....B........
+.B..B..B....B...
+..B.B.B.B..B....
+..BB.BBB.B.B....
+...BBBB.BBB.....
+.....BBBBB......
+......BBB.......
+......BBB.......
+.....dBBB.......
+......BBB.......
+......BBBB......
+......BBB.B.....
+.....dBBB..B....
+......BBB.......
+......BBB.......
+...B..BBB.......
+....B.BBB.......
+.....dBBB.......
+......BBB.......
+......BBB.......
+......BBB.......
+......BBB.......
+......BBB.......
+......BBB.......
+......BBB.......
+.....BBBBB......
+....BBBBBBB.....
+................
+"""
+
+
+@sprite(94)
+def _tree_dead_big_a():
+    return place(TREE_DEAD_BIG, 16, 28)
+
+
+@sprite(95)
+def _tree_dead_big_b():
+    return mirror(place(TREE_DEAD_BIG, 16, 28))
 
 
 TREE_BURNT = """
@@ -979,57 +1015,54 @@ def _chair_empty():
 
 
 # --- other skiers ----------------------------------------------------------
-# The rival skier wears orange; the boarder pink with a yellow board.
+# The rival skier wears orange, built on the same symmetric frame as the
+# hero: 2px arms, 2px legs, 2px skis.
 
 SKIER2_DOWN = """
-...yyyy...
-...ffff...
-..oooooo..
-.d.oooo.d.
-.d.oooo.d.
-.d.oooo.d.
-....vv....
-...vvvv...
-...v..v...
-...v..v...
-...k..k...
-...k..k...
-...k..k...
-...k..k...
+....yyyy....
+....ffff....
+...oooooo...
+..ddoooodd..
+..ddoooodd..
+....oooo....
+....vvvv....
+...vv..vv...
+...vv..vv...
+...kk..kk...
+...kk..kk...
+...kk..kk...
 """
 
 
 @sprite(28)
 def _skier2_down():
-    return place(SKIER2_DOWN, 12, 15)
+    return place(SKIER2_DOWN, 12, 12)
 
 
 SKIER2_DIAG_L = """
-...yyyy....
-...ffff....
-..oooooo...
-.d.oooo.d..
-.d.oooo.d..
-.d.oooo.d..
-....vvv....
-...vvvv....
-...vv.v....
-..vv..v....
-..k...k....
-.k...k.....
-.k...k.....
-k...k......
+....yyyy....
+....ffff....
+...oooooo...
+..ddoooodd..
+..ddoooodd..
+....oooo....
+....vvvv....
+...vv..vv...
+...vv..vv...
+..kk..kk....
+..kk..kk....
+.kk..kk.....
 """
 
 
 @sprite(29)
 def _skier2_diag_l():
-    return place(SKIER2_DIAG_L, 11, 15)
+    return place(SKIER2_DIAG_L, 12, 12)
 
 
 @sprite(30)
 def _skier2_diag_r():
-    return place(mirror(grid(SKIER2_DIAG_L)), 11, 15)
+    return place(mirror(grid(SKIER2_DIAG_L)), 12, 12)
 
 
 SKIER2_CRASH = """
@@ -1127,6 +1160,69 @@ def _dog_bark_b():
     return place(shift_up(art, 1), 10, 10)
 
 
+# --- deer ------------------------------------------------------------------
+# A deer trots straight across the slope. Hit one and it bursts — the deer
+# comes off much worse than you do.
+
+DEER = """
+.............BB.B.
+.............BB.B.
+..............BBB.
+.............BkBBB
+..BBBBBBBBBBBBBB..
+.wBBBBBBBBBBBBBB..
+.wBBffffffffBBB...
+..BBBBBBBBBBBB....
+...BB...BB..BB....
+...BB...BB..BB....
+...BB...BB...BB...
+..BB....BB...BB...
+"""
+
+
+@sprite(90)
+def _deer_a():
+    return place(DEER, 18, 12)
+
+
+@sprite(91)
+def _deer_b():
+    return place(shift_up(grid(DEER), 1), 18, 12)
+
+
+def deer_splat(pool):
+    dst = canvas(18, 12)
+    if pool:
+        # Settled: a wide dark pool with a few remains.
+        ellipse(dst, 8.5, 8, 7.0, 3.2, "r")
+        ellipse(dst, 8.5, 8.5, 4.5, 2.0, "v")
+        for x, y in ((5, 7), (9, 8), (12, 7)):
+            dst[y][x] = "B"
+        for x, y in ((1, 5), (16, 6), (7, 4), (12, 4)):
+            dst[y][x] = "r"
+    else:
+        # The burst itself: blood every which way.
+        ellipse(dst, 8.5, 6, 5.5, 3.6, "r")
+        ellipse(dst, 8.5, 6.5, 3.2, 2.0, "v")
+        for x, y in ((1, 2), (3, 0), (6, 0), (11, 0), (14, 1), (16, 3),
+                     (17, 6), (15, 9), (12, 11), (5, 11), (2, 9), (0, 5),
+                     (9, 1), (13, 2), (4, 10), (16, 10)):
+            dst[y][x] = "r"
+        for x, y in ((7, 5), (10, 6), (8, 7), (11, 4)):
+            dst[y][x] = "B"
+    return dst
+
+
+@sprite(92)
+def _deer_splat_a():
+    return deer_splat(False)
+
+
+@sprite(93)
+def _deer_splat_b():
+    return deer_splat(True)
+
+
 # --- snowboarders ----------------------------------------------------------
 
 
@@ -1200,56 +1296,60 @@ def _boarder_crash_d():
     return boarder_crash(15, 13, True)
 
 
-# --- signage ---------------------------------------------------------------
+# --- title card and hints --------------------------------------------------
 
 
-def peak(dst, apex_x, apex_y, height, cap=4):
-    """A snow-capped mountain: grey triangle, white for the top `cap` rows."""
+def mountain(dst, apex_x, apex_y, height, cap=6):
+    """A snow-capped peak: white cap with a jagged snowline, grey faces with
+    the right flank in shadow, all held together by a dark outline so it
+    still reads against the snow."""
     for j in range(height):
-        colour = "w" if j < cap else "s"
-        blit(dst, [[colour] * (2 * j + 1)], apex_x - j, apex_y + j)
-
-
-def outlined_text(dst, x, y, s, fill, outline, scale):
-    """Fat display text: the glyphs, ringed by a 1px outline."""
-    for ox in (-1, 0, 1):
-        for oy in (-1, 0, 1):
-            if ox or oy:
-                draw_text(dst, x + ox, y + oy, s, outline, scale)
-    draw_text(dst, x, y, s, fill, scale)
+        for i in range(-j, j + 1):
+            x, y = apex_x + i, apex_y + j
+            if not (0 <= x < len(dst[0]) and 0 <= y < len(dst)):
+                continue
+            if abs(i) >= j - 1 or j >= height - 1:
+                c = "n"                               # dark silhouette edge
+            elif j < cap:
+                c = "w"
+            elif j == cap:
+                c = "w" if (x + j) % 3 else "s"       # ragged snow edge
+            elif j == cap + 1 and (x * 5 + j) % 7 == 0:
+                c = "w"                               # stray snow below it
+            else:
+                c = "d" if i > (j * 2) // 3 else "s"  # sunlit / shadowed
+            dst[y][x] = c
+    # A ridge crease running down the sunlit face.
+    for j in range(cap + 1, height - 1):
+        x = apex_x - j // 2
+        y = apex_y + j
+        if 0 <= x < len(dst[0]) and 0 <= y < len(dst) and dst[y][x] == "s":
+            dst[y][x] = "d"
+    return dst
 
 
 @sprite(53)
 def _logo():
-    dst = canvas(120, 64)
-    # Mountains, with the monster peeking over the smaller one.
-    peak(dst, 44, 2, 17)
-    peak(dst, 84, 7, 12)
-    blit(dst, grid("""
-.dddddd.
-dssssssd
-dkwsskwd
-dssssssd
-dsmmmmsd
-.dssssd.
-"""), 88, 0)
-    # The wordmark: big, blocky, outlined, with a hard drop shadow.
+    # Mountains behind a fat Omarchy-green wordmark with a uniform 2px
+    # black outline.
+    dst = canvas(120, 44)
+    mountain(dst, 36, 0, 30)
+    mountain(dst, 88, 8, 22, cap=5)
     word = "OMARSKI"
     wx = (120 - text_width(word, 3)) // 2
-    draw_text(dst, wx + 2, 24, word, "s", 3)      # shadow
-    outlined_text(dst, wx, 22, word, "r", "k", 3)
-    fill_rect(dst, wx, 41, wx + text_width(word, 3), 43, "n")
-    draw_text(dst, (120 - text_width("A FREE OMARCHY GAME", 1)) // 2, 48,
-              "A FREE OMARCHY GAME", "k", 1)
-    draw_text(dst, (120 - text_width("SKI FAST. AVOID THE YETI.", 1)) // 2, 57,
-              "SKI FAST. AVOID THE YETI.", "d", 1)
+    wy = 25
+    for ox in range(-2, 3):
+        for oy in range(-2, 3):
+            if ox or oy:
+                draw_text(dst, wx + ox, wy + oy, word, "k", 3)
+    draw_text(dst, wx, wy, word, "G", 3)
     return dst
 
 
 @sprite(54)
 def _version():
     dst = canvas(44, 7)
-    draw_text(dst, 0, 1, "VERSION 3.0", "k")
+    draw_text(dst, 0, 1, "VERSION 4.0", "k")
     return dst
 
 
@@ -1265,73 +1365,22 @@ def _hint_numpad():
 
 @sprite(56)
 def _hint_keys():
-    dst = canvas(44, 22)
-    draw_text(dst, (44 - text_width("F2 = RESTART", 1)) // 2, 1,
-              "F2 = RESTART", "k")
-    draw_text(dst, (44 - text_width("F3 = PAUSE", 1)) // 2, 8, "F3 = PAUSE", "k")
-    draw_text(dst, (44 - text_width("F = FAST", 1)) // 2, 15, "F = FAST", "k")
+    dst = canvas(52, 22)
+    for i, line in enumerate(["Ⓞ = PAUSE", "F = FAST", "F2 = RESTART"]):
+        draw_text(dst, (52 - text_width(line, 1)) // 2, 1 + i * 7, line, "k")
     return dst
-
-
-@sprite(57)
-def _sign_start_r():
-    dst = canvas(22, 14)
-    fill_rect(dst, 14, 1, 16, 14, "B")
-    blit(dst, grid("""
-gggggg
-ggggk.
-.ggk..
-..k...
-"""), 16, 1)
-    blit(dst, sign(14, 11, ["GO!"], post_h=3), 0, 3)
-    return dst
-
-
-@sprite(58)
-def _sign_start_l():
-    return blit(canvas(24, 15), sign(24, 15, ["START"], post_h=4), 0, 0)
-
-
-@sprite(59)
-def _sign_finish_r():
-    dst = canvas(26, 15)
-    fill_rect(dst, 18, 0, 20, 15, "B")
-    for j in range(6):
-        for i in range(6):
-            dst[j][20 + i] = "k" if (i // 2 + j // 2) % 2 == 0 else "w"
-    blit(dst, sign(18, 11, ["DONE!"], post_h=3), 0, 4)
-    return dst
-
-
-@sprite(60)
-def _sign_finish_l():
-    return blit(canvas(28, 15), sign(28, 15, ["FINISH"], post_h=4), 0, 0)
-
-
-@sprite(61)
-def _sign_slalom():
-    return sign(27, 18, ["SLALOM"], post_h=5)
-
-
-@sprite(62)
-def _sign_tree_slalom():
-    return sign(29, 18, ["TREE", "SLALOM"], post_h=5)
-
-
-@sprite(63)
-def _sign_freestyle():
-    return sign(25, 18, ["FREE", "STYLE"], post_h=5)
 
 
 # --- the yeti --------------------------------------------------------------
-# A shaggy grey monster with a pink maw, outlined so he reads on the snow.
+# A shaggy grey monster, and properly mean about it: heavy brows angled
+# down into a scowl, red eyes, fangs top and bottom of the maw.
 
 YETI_ROAR = """
 .dd..........dd.
 dssd.dddddd.dssd
-dssddssssssddssd
-dssdskwsskwsdssd
-.dsdssssssssdsd.
+dssddskssksddssd
+dssdsrksskrsdssd
+.dsdsmwmmwmsdsd.
 .dsdsmmmmmmsdsd.
 ..ddsmwmwmmsdd..
 ...dssmmmmssd...
@@ -1367,10 +1416,10 @@ def _yeti_roar_b():
 YETI_RUN_A = """
 .....dddddd.....
 ....dssssssd....
-....dkwsskwd....
-....dssssssd....
-....dsmmmmsd....
-.dd.dssmmssd.dd.
+....dskssksd....
+....dsrkkrsd....
+....dswmmwsd....
+.dd.dsmmmmsd.dd.
 dssddssssssddssd
 dssssswwwwssssd.
 .dsssswwwwsssd..
@@ -1392,10 +1441,10 @@ dssd......dssd..
 YETI_RUN_B = """
 .....dddddd.....
 ....dssssssd....
-....dkwsskwd....
-....dssssssd....
-....dsmmmmsd....
-.dd.dssmmssd.dd.
+....dskssksd....
+....dsrkkrsd....
+....dswmmwsd....
+.dd.dsmmmmsd.dd.
 dssddssssssddssd
 dssssswwwwssssd.
 .dsssswwwwsssd..
@@ -1438,9 +1487,9 @@ def _yeti_run_d():
 YETI_LEAP = """
 ...ddddddd......
 ..dsssssssd.dd..
-.dskwsskwsddssd.
+.dskrsskrsddssd.
 .dsssssssssdsd..
-.dsmmmmmmsssd...
+.dsmwmmwmsssd...
 .dsmwmwmwsssd...
 .dssmmmmssssd...
 ..dssssssssssd..
@@ -1469,16 +1518,16 @@ def _yeti_leap_b():
 
 
 def yeti_body():
-    """Standing yeti with an open maw, the base for the eating frames."""
+    """Standing yeti, scowling, maw wide open — the base for the meal."""
     return grid("""
 .....dddddd.....
 ....dssssssd....
-....dkwsskwd....
-....dssssssd....
+....dskssksd....
+....dsrkkrsd....
 ....dsmmmmsd....
-....dsmmmmsd....
-...ddssmmssdd...
-..dsssssssssgd..
+....dsmwwmsd....
+...ddsmmmmsdd...
+..dssssssssssd..
 .dsssswwwwsssd..
 .dsssswwwwsssd..
 .dsswwwwwwwssd..
@@ -1497,8 +1546,8 @@ def yeti_body():
 
 
 @sprite(76)
-def _yeti_eat_a():
-    # The skier held aloft in one raised arm.
+def _yeti_grab():
+    # The skier snatched, held aloft in one raised arm.
     dst = place(yeti_body(), 16, 24)
     fill_rect(dst, 12, 4, 14, 9, "s")
     blit(dst, grid("""
@@ -1512,59 +1561,60 @@ kk
     return dst
 
 
-@sprite(77)
-def _yeti_eat_b():
-    # Lowered to the mouth.
+def yeti_shove():
+    # Headfirst into the maw: legs and ski tips thrashing above the jaws,
+    # both fists clamped around them.
     dst = place(yeti_body(), 16, 24)
     blit(dst, grid("""
-rr
-bb
-nn
-"""), 8, 6)
+k..k
+k..k
+n..n
+nnnn
+bbbb
+"""), 6, 0)
+    fill_rect(dst, 4, 2, 6, 5, "s")
+    fill_rect(dst, 10, 2, 12, 5, "s")
     return dst
 
 
+@sprite(77)
+def _yeti_shove_a():
+    return yeti_shove()
+
+
 @sprite(78)
-def _yeti_eat_c():
-    # Legs sticking out of the jaws.
+def _yeti_shove_b():
+    return shift_up(yeti_shove(), 1)
+
+
+def yeti_feet():
+    # Only the boots left, sticking out of the mouth. Freeze frame.
     dst = place(yeti_body(), 16, 24)
     blit(dst, grid("""
-n.n
-n.n
-k.k
-"""), 7, 7)
+nn.nn
+kk.kk
+"""), 6, 4)
+    blit(dst, grid("kkkk"), 11, 21)   # one dropped ski on the snow
     return dst
 
 
 @sprite(79)
-def _yeti_eat_d():
-    # Swallowed: a belly bulge and a dropped ski.
-    dst = place(yeti_body(), 16, 24)
-    fill_rect(dst, 6, 14, 11, 16, "s")
-    blit(dst, grid("kkkk"), 12, 20)
-    return dst
+def _yeti_feet_a():
+    return yeti_feet()
 
 
 @sprite(80)
-def _yeti_chew():
-    dst = place(yeti_body(), 16, 24)
-    # Mouth shut, contented: fur over the maw and a thin smile.
-    fill_rect(dst, 5, 4, 11, 7, "s")
-    fill_rect(dst, 6, 5, 10, 6, "d")
-    return dst
+def _yeti_feet_b():
+    return shift_up(yeti_feet(), 1)
 
 
 @sprite(81)
-def _yeti_burp():
+def _yeti_gulp():
+    # Jaws shut over the lot, cheeks bulging.
     dst = place(yeti_body(), 16, 24)
-    # Maw wide open, one ski flung clear.
-    fill_rect(dst, 5, 3, 11, 7, "m")
-    fill_rect(dst, 6, 4, 10, 6, "v")
-    blit(dst, grid("""
-..kk
-.kk.
-kk..
-"""), 12, 1)
+    fill_rect(dst, 5, 4, 11, 7, "s")
+    fill_rect(dst, 6, 5, 10, 6, "d")
+    blit(dst, grid("kkkk"), 11, 21)
     return dst
 
 
