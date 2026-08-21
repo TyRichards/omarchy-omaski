@@ -23,12 +23,6 @@ x=$(jq -r '.at[0]' <<<"$client")
 y=$(jq -r '.at[1]' <<<"$client")
 side=$(jq -r '.size[0]' <<<"$client")
 
-# hyprctl reports the client area; the move rule takes frame coordinates.
-border=$(hyprctl getoption general:border_size 2>/dev/null |
-  sed -n 's/^int: //p' | head -1)
-x=$((x - ${border:-2}))
-y=$((y - ${border:-2}))
-
 # Only kill the pid if it is still the quickshell game instance.
 if grep -qz "QS_APP_ID=$app_id" "/proc/$pid/environ" 2>/dev/null; then
   kill "$pid" 2>/dev/null || true
