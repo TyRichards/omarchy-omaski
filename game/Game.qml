@@ -256,8 +256,7 @@ FocusScope {
     }
 
     // --- overlays ---------------------------------------------------------
-    // (panels and title text live on the UI overlay canvas)
-    if (root.hudVisible && root.started) root.drawHud(ctx)
+    // (the status box, panels and title text live on the UI overlay canvas)
     if (!root.started) root.drawTitle(ctx)
   }
 
@@ -288,6 +287,8 @@ FocusScope {
         root.uiText(ctx, sx(s.x) * P, burstMid - 5 * U / 2, s.crashWord)
       }
     }
+
+    if (root.hudVisible && root.started) root.drawHud(ctx)
 
     if (!root.started) root.drawTitleText(ctx)
 
@@ -322,30 +323,34 @@ FocusScope {
     ctx.restore()
   }
 
+  // The status box, on the overlay so it is rendered by the exact same
+  // text path as the title screen. One glyph pixel = one world pixel, so
+  // it stays the small size it was.
   function drawHud(ctx) {
     var s = root.sim
-    // Two columns: labels on the left, values right-aligned. Drawn at 1px
-    // weight — the status box stays small — and the font is strictly
-    // monospace, so the ticking digits hold perfectly still.
+    var P = root.pixelScale
+    // Two columns: labels on the left, values right-aligned; the font is
+    // strictly monospace, so the ticking digits hold perfectly still.
     var rows = [
       ["TIME", Engine.formatTime(s.elapsed)],
       ["DIST", Math.floor(s.distance) + "M"],
       ["SPEED", Math.floor(s.speed) + "M/S"],
       ["STYLE", String(Math.floor(s.style))]
     ]
-    var labelW = Font.width("SPEED")
-    var valueW = Font.width("0:00:00.00")
-    var w = labelW + 4 + valueW + 6
-    var h = rows.length * 7 + 4
-    var x = root.vw - w - 2
+    var labelW = Font.width("SPEED", P)
+    var valueW = Font.width("0:00:00.00", P)
+    var w = labelW + 4 * P + valueW + 6 * P
+    var h = rows.length * 7 * P + 4 * P
+    var x = uiCanvas.width - w - 2 * P
     ctx.fillStyle = root.ink
-    ctx.fillRect(x - 1, 1, w + 2, h + 2)
+    ctx.fillRect(x - P, P, w + 2 * P, h + 2 * P)
     ctx.fillStyle = root.snow
-    ctx.fillRect(x, 2, w, h)
+    ctx.fillRect(x, 2 * P, w, h)
     ctx.fillStyle = root.ink
     for (var j = 0; j < rows.length; j++) {
-      Font.draw(ctx, x + 3, 4 + j * 7, rows[j][0])
-      Font.draw(ctx, x + w - 3 - Font.width(rows[j][1]), 4 + j * 7, rows[j][1])
+      Font.draw(ctx, x + 3 * P, (4 + j * 7) * P, rows[j][0], P)
+      Font.draw(ctx, x + w - 3 * P - Font.width(rows[j][1], P),
+                (4 + j * 7) * P, rows[j][1], P)
     }
   }
 
@@ -371,9 +376,11 @@ FocusScope {
 
     ctx.fillStyle = root.ink
     root.uiText(ctx, cx, y, "SKI FREE. AVOID THE YETI.")
-    y += lh + U
+    // The version line and everything below it sit together well down the
+    // page, leaving open snow between the tagline and the hints.
+    y = Math.max(y + lh + U, Math.round(uiCanvas.height * 0.62))
     ctx.fillStyle = root.inkSoft
-    root.uiText(ctx, cx, y, "VERSION 4.5")
+    root.uiText(ctx, cx, y, "VERSION 4.7")
     y += lh + U
     ctx.fillStyle = root.ink
     root.uiText(ctx, cx, y, "USE NUMPAD (0-9)")

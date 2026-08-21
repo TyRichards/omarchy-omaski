@@ -52,14 +52,14 @@ PALETTE = {
 # Sprite canvas sizes, kept identical to game/Sprites.js. At 8 px/metre these
 # give every object the same world-space footprint the classic had at 16.
 SIZES = {
-    1: (12, 19), 2: (16, 20), 3: (18, 16), 4: (16, 16), 5: (16, 20),
+    1: (14, 19), 2: (16, 20), 3: (18, 16), 4: (16, 16), 5: (16, 20),
     6: (18, 16), 7: (16, 16), 8: (12, 15), 9: (12, 15), 10: (12, 15),
     11: (12, 15), 12: (56, 30), 13: (18, 14), 14: (14, 18), 15: (14, 16),
     16: (14, 16), 17: (14, 17), 18: (16, 13), 19: (16, 16), 20: (16, 12),
-    21: (13, 16), 22: (13, 16), 27: (32, 16), 28: (24, 24), 29: (24, 24),
-    30: (24, 24), 31: (24, 16), 32: (24, 20), 33: (22, 16), 34: (22, 16),
-    35: (20, 18), 36: (20, 18), 37: (26, 30), 38: (20, 30), 39: (26, 32),
-    40: (30, 30), 41: (32, 32), 42: (32, 32), 43: (26, 30), 44: (30, 26),
+    21: (13, 16), 22: (13, 16), 27: (32, 16), 28: (17, 17), 29: (17, 17),
+    30: (17, 17), 31: (17, 11), 32: (17, 14), 33: (15, 11), 34: (15, 11),
+    35: (14, 13), 36: (14, 13), 37: (18, 21), 38: (14, 21), 39: (18, 22),
+    40: (21, 21), 41: (22, 22), 42: (22, 22), 43: (18, 21), 44: (21, 18),
     45: (12, 6), 46: (8, 6), 47: (8, 3), 48: (12, 4), 49: (14, 16),
     50: (11, 14), 51: (16, 32), 52: (16, 6), 53: (120, 44),
     64: (14, 32), 65: (13, 16), 66: (13, 16),
@@ -67,8 +67,8 @@ SIZES = {
     72: (16, 24), 73: (16, 24), 74: (16, 24), 75: (16, 24), 76: (16, 24),
     77: (16, 24), 78: (16, 24), 79: (16, 24), 80: (16, 24), 81: (16, 24),
     82: (8, 4), 83: (11, 14), 84: (11, 14), 85: (11, 14), 86: (4, 6),
-    87: (14, 16), 88: (14, 16), 89: (14, 16), 90: (36, 24), 91: (36, 24),
-    92: (36, 24), 93: (36, 24), 94: (16, 28), 95: (16, 28), 96: (18, 16),
+    87: (14, 16), 88: (14, 16), 89: (14, 16), 90: (25, 17), 91: (25, 17),
+    92: (25, 17), 93: (25, 17), 94: (16, 28), 95: (16, 28), 96: (18, 16),
 }
 
 # ---------------------------------------------------------------------------
@@ -95,6 +95,15 @@ def shift_up(rows, n=1):
     """Move art up n rows inside the same canvas (a hop/bob frame)."""
     blank = [["."] * len(rows[0]) for _ in range(n)]
     return rows[n:] + blank
+
+
+def scale_by(rows, f=1.4):
+    """Nearest-neighbour resample by factor f (used at 1.4: the doubled
+    critters, reduced 30%)."""
+    sh, sw = len(rows), len(rows[0])
+    dh, dw = round(sh * f), round(sw * f)
+    return [[rows[min(sh - 1, int(y / f))][min(sw - 1, int(x / f))]
+             for x in range(dw)] for y in range(dh)]
 
 
 def scale2(rows):
@@ -282,31 +291,31 @@ def sprite(sid):
 # the snow at a dead stop.
 
 SKIER_DOWN = """
-.....rr.....
-s...rrrr...s
-s...rrrr...s
-s...ffff...s
-s..bbbbbb..s
-sbb.bbbb.bbs
-sbb.bbbb.bbs
-sbb.bbbb.bbs
-...bbbbbb...
-....nnnn....
-....nnnn....
-...nn..nn...
-...nn..nn...
-...kk..kk...
-...kk..kk...
-...kk..kk...
-...kk..kk...
-...kk..kk...
-...kk..kk...
+......rr......
+kkk..rrrr..kkk
+.k...rrrr...k.
+.k...ffff...k.
+.k..bbbbbb..k.
+.kbb.bbbb.bbk.
+.kbb.bbbb.bbk.
+.kbb.bbbb.bbk.
+....bbbbbb....
+.....nnnn.....
+.....nnnn.....
+....nn..nn....
+....nn..nn....
+....kk..kk....
+....kk..kk....
+....kk..kk....
+....kk..kk....
+....kk..kk....
+....kk..kk....
 """
 
 
 @sprite(1)
 def _skier_down():
-    return place(SKIER_DOWN, 12, 19)
+    return place(SKIER_DOWN, 14, 19)
 
 
 # One notch off straight: skis run long, tails peeking behind the boots and
@@ -386,14 +395,14 @@ SKIER_SIDE_R = """
 .....rrrr.......
 .....rrrr.......
 .....ffff.......
-....bbbbbb......
-.dd.bbbbbb.d....
-.dd.bbbbbb.d....
-.dd.bbbbbb.d....
-.dd..bbbb..d....
-.dd..nnnn..d....
-.dd.nn.nn..d....
-.dd.nn.nn..d....
+.kkkbbbbbbkkk...
+..k.bbbbbb.k....
+..k.bbbbbb.k....
+..k.bbbbbb.k....
+..k..bbbb..k....
+..k..nnnn..k....
+..k.nn.nn..k....
+..k.nn.nn..k....
 ...knnknnk......
 ..kkkkkkkkkkkkkk
 ................
@@ -658,9 +667,9 @@ def _jump_v():
             if 0 <= x < 14:
                 dst[r][x] = "k"
     blit(dst, grid(JUMP_BODY), 2, 1)
-    # Thin poles trailing up from the fists.
-    for x, y in ((1, 4), (0, 3), (12, 4), (13, 3)):
-        dst[y][x] = "s"
+    # Poles gripped in the fists, flaring out just below the ski tips.
+    for x, y in ((1, 5), (0, 4), (12, 5), (13, 4)):
+        dst[y][x] = "k"
     return dst
 
 
@@ -1120,7 +1129,7 @@ SKIER2_DOWN = """
 
 @sprite(28)
 def _skier2_down():
-    return place(scale2(grid(SKIER2_DOWN)), 24, 24)
+    return place(scale_by(grid(SKIER2_DOWN)), 17, 17)
 
 
 SKIER2_DIAG_L = """
@@ -1141,12 +1150,12 @@ SKIER2_DIAG_L = """
 
 @sprite(29)
 def _skier2_diag_l():
-    return place(scale2(grid(SKIER2_DIAG_L)), 24, 24)
+    return place(scale_by(grid(SKIER2_DIAG_L)), 17, 17)
 
 
 @sprite(30)
 def _skier2_diag_r():
-    return place(scale2(mirror(grid(SKIER2_DIAG_L))), 24, 24)
+    return place(scale_by(mirror(grid(SKIER2_DIAG_L))), 17, 17)
 
 
 SKIER2_CRASH = """
@@ -1163,7 +1172,7 @@ kk.w.ww.w.kk
 
 @sprite(31)
 def _skier2_crash():
-    return place(scale2(grid(SKIER2_CRASH)), 24, 16)
+    return place(scale_by(grid(SKIER2_CRASH)), 17, 11)
 
 
 SKIER2_SPRAWL = """
@@ -1182,7 +1191,7 @@ SKIER2_SPRAWL = """
 
 @sprite(32)
 def _skier2_sprawl():
-    return place(scale2(grid(SKIER2_SPRAWL)), 24, 20)
+    return place(scale_by(grid(SKIER2_SPRAWL)), 17, 14)
 
 
 # --- the dog ---------------------------------------------------------------
@@ -1212,12 +1221,12 @@ DOG_B = """
 
 @sprite(33)
 def _dog_a():
-    return place(scale2(grid(DOG_A)), 22, 16)
+    return place(scale_by(grid(DOG_A)), 15, 11)
 
 
 @sprite(34)
 def _dog_b():
-    return place(scale2(grid(DOG_B)), 22, 16)
+    return place(scale_by(grid(DOG_B)), 15, 11)
 
 
 DOG_BARK = """
@@ -1235,13 +1244,13 @@ w..w..BB..
 
 @sprite(35)
 def _dog_bark_a():
-    return place(scale2(grid(DOG_BARK)), 20, 18)
+    return place(scale_by(grid(DOG_BARK)), 14, 13)
 
 
 @sprite(36)
 def _dog_bark_b():
     art = remap(grid(DOG_BARK), {"w": "s"})
-    return place(scale2(shift_up(art, 1)), 20, 18)
+    return place(scale_by(shift_up(art, 1)), 14, 13)
 
 
 # --- deer ------------------------------------------------------------------
@@ -1266,12 +1275,12 @@ DEER = """
 
 @sprite(90)
 def _deer_a():
-    return place(scale2(grid(DEER)), 36, 24)
+    return place(scale_by(grid(DEER)), 25, 17)
 
 
 @sprite(91)
 def _deer_b():
-    return place(scale2(shift_up(grid(DEER), 1)), 36, 24)
+    return place(scale_by(shift_up(grid(DEER), 1)), 25, 17)
 
 
 def deer_splat(pool):
@@ -1299,12 +1308,12 @@ def deer_splat(pool):
 
 @sprite(92)
 def _deer_splat_a():
-    return scale2(deer_splat(False))
+    return scale_by(deer_splat(False))
 
 
 @sprite(93)
 def _deer_splat_b():
-    return scale2(deer_splat(True))
+    return scale_by(deer_splat(True))
 
 
 # --- snowboarders ----------------------------------------------------------
@@ -1326,24 +1335,24 @@ def boarder(w, h, lean):
 
 @sprite(37)
 def _boarder_a():
-    return scale2(boarder(13, 15, -1))
+    return scale_by(boarder(13, 15, -1))
 
 
 @sprite(38)
 def _boarder_b():
-    return scale2(boarder(10, 15, 0))
+    return scale_by(boarder(10, 15, 0))
 
 
 @sprite(39)
 def _boarder_c():
-    return scale2(boarder(13, 16, 1))
+    return scale_by(boarder(13, 16, 1))
 
 
 @sprite(40)
 def _boarder_d():
     dst = boarder(15, 15, 0)
     fill_rect(dst, 1, 10, 4, 11, "y")   # board grabbed sideways
-    return scale2(dst)
+    return scale_by(dst)
 
 
 def boarder_crash(w, h, flip):
@@ -1362,22 +1371,22 @@ def boarder_crash(w, h, flip):
 
 @sprite(41)
 def _boarder_crash_a():
-    return scale2(boarder_crash(16, 16, False))
+    return scale_by(boarder_crash(16, 16, False))
 
 
 @sprite(42)
 def _boarder_crash_b():
-    return scale2(boarder_crash(16, 16, True))
+    return scale_by(boarder_crash(16, 16, True))
 
 
 @sprite(43)
 def _boarder_crash_c():
-    return scale2(boarder_crash(13, 15, False))
+    return scale_by(boarder_crash(13, 15, False))
 
 
 @sprite(44)
 def _boarder_crash_d():
-    return scale2(boarder_crash(15, 13, True))
+    return scale_by(boarder_crash(15, 13, True))
 
 
 # --- title card and hints --------------------------------------------------
