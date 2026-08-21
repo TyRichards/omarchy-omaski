@@ -52,7 +52,7 @@ PALETTE = {
 # Sprite canvas sizes, kept identical to game/Sprites.js. At 8 px/metre these
 # give every object the same world-space footprint the classic had at 16.
 SIZES = {
-    1: (12, 16), 2: (16, 18), 3: (18, 17), 4: (16, 16), 5: (16, 18),
+    1: (12, 19), 2: (16, 23), 3: (18, 17), 4: (16, 16), 5: (16, 23),
     6: (18, 17), 7: (16, 16), 8: (12, 15), 9: (12, 15), 10: (12, 15),
     11: (12, 15), 12: (56, 30), 13: (16, 14), 14: (14, 18), 15: (14, 16),
     16: (14, 16), 17: (14, 17), 18: (16, 13), 19: (16, 16), 20: (16, 12),
@@ -286,12 +286,15 @@ dbb.bbbb.bbd
 ...kk..kk...
 ...kk..kk...
 ...kk..kk...
+...kk..kk...
+...kk..kk...
+...kk..kk...
 """
 
 
 @sprite(1)
 def _skier_down():
-    return place(SKIER_DOWN, 12, 16)
+    return place(SKIER_DOWN, 12, 19)
 
 
 # One notch off straight: skis run long, tails peeking behind the boots and
@@ -308,24 +311,29 @@ SKIER_DIAG_R = """
 ..d..bbbbbb..d..
 dd.....nnnn...dd
 ......nnnn......
-.....nn..nn.....
+..kk.nnkknn.....
 ....knn.knn.....
 .....kk..kk.....
 .....kk..kk.....
 ......kk..kk....
 ......kk..kk....
 .......kk..kk...
+.......kk..kk...
+........kk..kk..
+........kk..kk..
+.........kk..kk.
+.........kk..kk.
 """
 
 
 @sprite(2)
 def _skier_diag_r():
-    return place(SKIER_DIAG_R, 16, 18)
+    return place(SKIER_DIAG_R, 16, 23)
 
 
 @sprite(5)
 def _skier_diag_l():
-    return mirror(place(SKIER_DIAG_R, 16, 18))
+    return mirror(place(SKIER_DIAG_R, 16, 23))
 
 
 # Two notches: a hard traverse. Arms tucked against the body, both poles

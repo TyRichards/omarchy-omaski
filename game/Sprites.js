@@ -177,7 +177,7 @@ var YETI_EAT_FRAMES = [YETI_GRAB, YETI_GRAB,
 // Sprite dimensions, so the engine can size and centre images without waiting
 // on asynchronous image loads. Kept identical to tools/make-sprites.py.
 var SIZES = {
-  1: [12, 16], 2: [16, 18], 3: [18, 17], 4: [16, 16], 5: [16, 18],
+  1: [12, 19], 2: [16, 23], 3: [18, 17], 4: [16, 16], 5: [16, 23],
   6: [18, 17], 7: [16, 16], 8: [12, 15], 9: [12, 15], 10: [12, 15],
   11: [12, 15], 12: [56, 30], 13: [16, 14], 14: [14, 18], 15: [14, 16],
   16: [14, 16], 17: [14, 17], 18: [16, 13], 19: [16, 16], 20: [16, 12],
