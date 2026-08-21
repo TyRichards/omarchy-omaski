@@ -291,8 +291,8 @@ def sprite(sid):
 # the snow at a dead stop.
 
 SKIER_DOWN = """
-kk....rr....kk
-kk...rrrr...kk
+.kk...rr...kk.
+.kk..rrrr..kk.
 .k...rrrr...k.
 .k...ffff...k.
 .k..bbbbbb..k.
