@@ -52,17 +52,17 @@ PALETTE = {
 # Sprite canvas sizes, kept identical to game/Sprites.js. At 8 px/metre these
 # give every object the same world-space footprint the classic had at 16.
 SIZES = {
-    1: (10, 16), 2: (16, 18), 3: (18, 15), 4: (16, 16), 5: (16, 18),
+    1: (12, 16), 2: (16, 18), 3: (18, 15), 4: (16, 16), 5: (16, 18),
     6: (18, 15), 7: (16, 16), 8: (12, 15), 9: (12, 15), 10: (12, 15),
-    11: (12, 15), 12: (28, 18), 13: (16, 14), 14: (14, 18), 15: (14, 16),
+    11: (12, 15), 12: (56, 30), 13: (16, 14), 14: (14, 18), 15: (14, 16),
     16: (14, 16), 17: (14, 17), 18: (16, 13), 19: (16, 16), 20: (16, 12),
     21: (13, 16), 22: (13, 16), 27: (32, 16), 28: (12, 12), 29: (12, 12),
     30: (12, 12), 31: (12, 12), 32: (12, 12), 33: (11, 8), 34: (11, 8),
     35: (10, 10), 36: (10, 10), 37: (13, 15), 38: (10, 15), 39: (13, 16),
     40: (15, 15), 41: (16, 16), 42: (16, 16), 43: (13, 15), 44: (15, 13),
     45: (12, 6), 46: (8, 6), 47: (8, 3), 48: (12, 4), 49: (14, 16),
-    50: (11, 14), 51: (16, 32), 52: (16, 6), 53: (120, 44), 54: (44, 7),
-    55: (72, 14), 56: (52, 22), 64: (12, 32), 65: (13, 16), 66: (13, 16),
+    50: (11, 14), 51: (16, 32), 52: (16, 6), 53: (120, 44), 54: (88, 12),
+    55: (144, 26), 56: (96, 42), 64: (12, 32), 65: (13, 16), 66: (13, 16),
     67: (13, 16), 68: (16, 24), 69: (16, 24), 70: (16, 24), 71: (16, 24),
     72: (16, 24), 73: (16, 24), 74: (16, 24), 75: (16, 24), 76: (16, 24),
     77: (16, 24), 78: (16, 24), 79: (16, 24), 80: (16, 24), 81: (16, 24),
@@ -158,15 +158,17 @@ def rim(dst, body, edge):
 
 # ---------------------------------------------------------------------------
 # The PICO-8 system font (released CC-0 by Lexaloffle): 3x5 glyphs on a
-# 4-pixel advance. Keep this table in step with game/Font.js. "❎" and "Ⓞ"
-# stand in for the PICO-8 controller buttons.
+# 4-pixel advance, strictly monospace — even the dot fills a 3-wide box.
+# Extracted pixel-for-pixel from the published font sheet, including the
+# real ❎ and 🅾 controller-button glyphs (7 wide, mapped to "❎"/"Ⓞ").
+# Keep this table in step with game/Font.js.
 # ---------------------------------------------------------------------------
 
 FONT = {
     "A": "### #.# ### #.# #.#", "B": "### #.# ##. #.# ###",
     "C": ".## #.. #.. #.. .##", "D": "##. #.# #.# #.# ###",
-    "E": "### #.. ### #.. ###", "F": "### #.. ### #.. #..",
-    "G": ".## #.. #.# #.# ###", "H": "#.# #.# ### #.# #.#",
+    "E": "### #.. ##. #.. ###", "F": "### #.. ##. #.. #..",
+    "G": ".## #.. #.. #.# ###", "H": "#.# #.# ### #.# #.#",
     "I": "### .#. .#. .#. ###", "J": "### .#. .#. .#. ##.",
     "K": "#.# #.# ##. #.# #.#", "L": "#.. #.. #.. #.. ###",
     "M": "### ### #.# #.# #.#", "N": "##. #.# #.# #.# #.#",
@@ -183,12 +185,12 @@ FONT = {
     "8": "### #.# ### #.# ###", "9": "### #.# ### ..# ..#",
     "(": ".#. #.. #.. #.. .#.", ")": ".#. ..# ..# ..# .#.",
     "-": "... ... ### ... ...", "=": "... ### ... ### ...",
-    ".": ". . . . #", "!": "# # # . #", ":": ". # . # .",
-    "/": "..# .#. .#. .#. #..", " ": ".. .. .. .. ..",
-    "%": "#.# ..# .#. #.. #.#", "*": "#.# .#. #.# ... ...",
-    "@": ".## #.# ### #.. .##",
-    "❎": "#...# .#.#. ..#.. .#.#. #...#",
-    "Ⓞ": ".###. #...# #...# #...# .###.",
+    ".": "... ... ... ... .#.", "!": ".#. .#. .#. ... .#.",
+    ":": "... .#. ... .#. ...", "/": "..# .#. .#. .#. #..",
+    "%": "#.# ..# .#. #.. #.#", "*": "#.# .#. ### .#. #.#",
+    "@": ".#. #.# #.# #.. .##", " ": "... ... ... ... ...",
+    "❎": ".#####. ##.#.## ###.### ##.#.## .#####.",
+    "Ⓞ": ".#####. ##...## ##.#.## ##...## .#####.",
 }
 
 
@@ -260,34 +262,36 @@ def sprite(sid):
 
 # --- the skier -------------------------------------------------------------
 # Red beanie with a bobble on top, blue jacket, dark-blue trousers, black
-# skis, grey poles. Every pose is built symmetric: 2px arms, 2px legs,
-# 2px skis, a straight waist rather than an hourglass — and the poles track
-# the skis: straight back when pointing downhill, flared 30 degrees on a
-# gentle turn, trailing parallel behind the skis on a hard traverse.
+# skis. Every pose is built symmetric: 2px blue sleeves, 2px legs, 2px skis,
+# a straight waist rather than an hourglass. The poles are always thin grey
+# lines — never more than a single pixel of thickness — and they track the
+# skis: straight back when pointing downhill, flared 30 degrees on a gentle
+# turn, trailing parallel behind the skis on a hard traverse, planted in
+# the snow at a dead stop.
 
 SKIER_DOWN = """
-....rr....
-d..rrrr..d
-d..rrrr..d
-d..ffff..d
-d.bbbbbb.d
-dd.bbbb.dd
-dd.bbbb.dd
-dd.bbbb.dd
-..bbbbbb..
-...nnnn...
-...nnnn...
-..nn..nn..
-..nn..nn..
-..kk..kk..
-..kk..kk..
-..kk..kk..
+.....rr.....
+d...rrrr...d
+d...rrrr...d
+d...ffff...d
+d..bbbbbb..d
+dbb.bbbb.bbd
+dbb.bbbb.bbd
+dbb.bbbb.bbd
+...bbbbbb...
+....nnnn....
+....nnnn....
+...nn..nn...
+...nn..nn...
+...kk..kk...
+...kk..kk...
+...kk..kk...
 """
 
 
 @sprite(1)
 def _skier_down():
-    return place(SKIER_DOWN, 10, 16)
+    return place(SKIER_DOWN, 12, 16)
 
 
 # One notch off straight: skis run long, tails peeking behind the boots and
@@ -298,11 +302,11 @@ SKIER_DIAG_R = """
 ......rrrr......
 ......ffff......
 .....bbbbbb.....
-...dd.bbbb.dd...
-...dd.bbbb.dd...
-...dd.bbbb.dd...
-..dd.bbbbbb.dd..
-dd....nnnn....dd
+...bb.bbbb.bb...
+...bb.bbbb.bb...
+...bb.bbbb.bb...
+..d..bbbbbb..d..
+dd.....nnnn...dd
 ......nnnn......
 .....nn..nn.....
 ....knn.knn.....
@@ -333,9 +337,9 @@ SKIER_TRAV_R = """
 ......rrrr........
 ......ffff........
 dd...bbbbbb.......
-..ddddbbbbdd......
-dd..ddbbbbdd......
-..ddddbbbbdd......
+..ddbbbbbbbb......
+dd..bbbbbbbb......
+..ddbbbbbbbb......
 ......bbbb........
 ......nnnn........
 .....nn.nn........
@@ -364,13 +368,13 @@ SKIER_SIDE_R = """
 .....rrrr.......
 .....ffff.......
 ....bbbbbb......
-...ddbbbbdd.....
-...ddbbbbdd.....
-...ddbbbbdd.....
-...d.bbbb.d.....
-...d.nnnn.d.....
-...dnn.nn.d.....
-...dnn.nn.d.....
+..d.bbbbbb.d....
+..d.bbbbbb.d....
+..d.bbbbbb.d....
+..d..bbbb..d....
+..d..nnnn..d....
+..d.nn.nn..d....
+..d.nn.nn..d....
 ...knnknnk......
 ..kkkkkkkkkkkkkk
 ................
@@ -393,9 +397,9 @@ SKIER_STEP_L = """
 ....rrrr....
 ....ffrr....
 ....bbbb....
-..ddbbbbdd..
-..ddbbbbdd..
-..ddbbbbdd..
+.d.bbbbbb.d.
+.d.bbbbbb.d.
+.d.bbbbbb.d.
 ....bbbb....
 ....nnn.....
 ...nnnnn....
@@ -422,9 +426,9 @@ SKIER_CLIMB_L = """
 ....rrrr....
 ....ffrr....
 ....bbbb....
-..ddbbbbdd..
-..ddbbbbdd..
-..ddbbbbdd..
+.d.bbbbbb.d.
+.d.bbbbbb.d.
+.d.bbbbbb.d.
 ....bbbb....
 ....nnn.....
 ...nnnnn....
@@ -452,16 +456,16 @@ def _skier_climb_r():
 @sprite(12)
 def _crash_burst():
     # A proper comic-book starburst: nine spikes around a fat yellow core
-    # with a red rim. The crash word is drawn over it at runtime, so the
-    # game can swap OUCH! for something saltier.
-    dst = canvas(28, 18)
-    cx, cy = 13.5, 8.5
-    for y in range(18):
-        for x in range(28):
-            dx, dy = (x - cx) / 1.55, (y - cy)
+    # with a red rim. The crash word is drawn over it at runtime (at double
+    # scale), so the game can swap OUCH! for something saltier.
+    dst = canvas(56, 30)
+    cx, cy = 27.5, 14.5
+    for y in range(30):
+        for x in range(56):
+            dx, dy = (x - cx) / 1.95, (y - cy)
             r = math.hypot(dx, dy)
             a = math.atan2(dy, dx)
-            edge = 4.3 + 4.6 * abs(math.cos(a * 4.5)) ** 1.6
+            edge = 7.5 + 5.5 * abs(math.cos(a * 4.5)) ** 1.6
             if r <= edge:
                 dst[y][x] = "y"
     return rim(dst, "y", "r")
@@ -590,8 +594,8 @@ JUMP_BODY = """
 ...rrrr...
 ...rrrr...
 ...ffff...
-dd.bbbb.dd
-.ddbbbbdd.
+bb.bbbb.bb
+.bbbbbbbb.
 ..bbbbbb..
 ..bbbbbb..
 ...nnnn...
@@ -609,6 +613,9 @@ def _jump_v():
             if 0 <= x < 14:
                 dst[r][x] = "k"
     blit(dst, grid(JUMP_BODY), 2, 1)
+    # Thin poles trailing up from the fists.
+    for x, y in ((1, 4), (0, 3), (12, 4), (13, 3)):
+        dst[y][x] = "d"
     return dst
 
 
@@ -663,8 +670,8 @@ def _jump_tuck():
 # thrown up in a V, skis splayed into a perfect upside-down V below.
 SKIER_BUMP = """
 d................d
-.dd............dd.
-..dd....rr....dd..
+.d..............d.
+..d.....rr.....d..
 ...bb..rrrr..bb...
 ....bb.rrrr.bb....
 .....b.ffff.b.....
@@ -1348,26 +1355,27 @@ def _logo():
 
 @sprite(54)
 def _version():
-    dst = canvas(44, 7)
-    draw_text(dst, 0, 1, "VERSION 4.0", "k")
+    dst = canvas(88, 12)
+    draw_text(dst, (88 - text_width("VERSION 4.1", 2)) // 2, 1,
+              "VERSION 4.1", "k", 2)
     return dst
 
 
 @sprite(55)
 def _hint_numpad():
-    dst = canvas(72, 14)
-    draw_text(dst, (72 - text_width("USE NUMPAD (0-9)", 1)) // 2, 1,
-              "USE NUMPAD (0-9)", "k")
-    draw_text(dst, (72 - text_width("FOR BETTER CONTROL", 1)) // 2, 8,
-              "FOR BETTER CONTROL", "k")
+    dst = canvas(144, 26)
+    draw_text(dst, (144 - text_width("USE NUMPAD (0-9)", 2)) // 2, 1,
+              "USE NUMPAD (0-9)", "k", 2)
+    draw_text(dst, (144 - text_width("FOR BETTER CONTROL", 2)) // 2, 14,
+              "FOR BETTER CONTROL", "k", 2)
     return dst
 
 
 @sprite(56)
 def _hint_keys():
-    dst = canvas(52, 22)
+    dst = canvas(96, 42)
     for i, line in enumerate(["Ⓞ = PAUSE", "F = FAST", "F2 = RESTART"]):
-        draw_text(dst, (52 - text_width(line, 1)) // 2, 1 + i * 7, line, "k")
+        draw_text(dst, (96 - text_width(line, 2)) // 2, 1 + i * 13, line, "k", 2)
     return dst
 
 

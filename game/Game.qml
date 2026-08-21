@@ -142,13 +142,17 @@ FocusScope {
                   sy(worldY) - Sprites.height(id) - (lift || 0))
   }
 
+  // All UI text renders at double scale — chunky, like PICO-8's own menus.
+  readonly property int fontScale: 2
+  readonly property int lineH: 5 * fontScale + 3
+
   // A bordered panel of centred text lines, PICO-8 style.
   function panel(ctx, cx, top, lines) {
     var w = 0
     for (var i = 0; i < lines.length; i++)
-      w = Math.max(w, Font.width(lines[i]))
-    w += 8
-    var h = lines.length * 7 + 5
+      w = Math.max(w, Font.width(lines[i], root.fontScale))
+    w += 10
+    var h = lines.length * root.lineH + 6
     var x = Math.round(cx - w / 2)
     ctx.fillStyle = root.ink
     ctx.fillRect(x - 1, top - 1, w + 2, h + 2)
@@ -156,8 +160,8 @@ FocusScope {
     ctx.fillRect(x, top, w, h)
     ctx.fillStyle = root.ink
     for (var j = 0; j < lines.length; j++) {
-      Font.draw(ctx, Math.round(cx - Font.width(lines[j]) / 2),
-                top + 3 + j * 7, lines[j])
+      Font.draw(ctx, Math.round(cx - Font.width(lines[j], root.fontScale) / 2),
+                top + 4 + j * root.lineH, lines[j], root.fontScale)
     }
   }
 
@@ -192,8 +196,9 @@ FocusScope {
       if (cr.bark && !cr.down) {
         // The dog pipes up when you get close.
         ctx.fillStyle = root.ink
-        Font.draw(ctx, sx(cr.x) - (Font.width("WOOF!") >> 1),
-                  sy(cr.y) - Sprites.height(frame[0]) - 8, "WOOF!")
+        Font.draw(ctx, sx(cr.x) - (Font.width("WOOF!", root.fontScale) >> 1),
+                  sy(cr.y) - Sprites.height(frame[0]) - 5 * root.fontScale - 4,
+                  "WOOF!", root.fontScale)
       }
     }
 
@@ -218,9 +223,10 @@ FocusScope {
                         burstTop)
         }
         ctx.fillStyle = root.ink
-        Font.draw(ctx, sx(s.x) - (Font.width(s.crashWord) >> 1),
-                  burstTop + ((Sprites.height(Sprites.CRASH_OUCH) - 5) >> 1),
-                  s.crashWord)
+        Font.draw(ctx, sx(s.x) - (Font.width(s.crashWord, root.fontScale) >> 1),
+                  burstTop + ((Sprites.height(Sprites.CRASH_OUCH)
+                               - 5 * root.fontScale) >> 1),
+                  s.crashWord, root.fontScale)
       }
     }
 
@@ -270,18 +276,19 @@ FocusScope {
 
   function drawHud(ctx) {
     var s = root.sim
-    // Two columns: labels on the left, values right-aligned so the digits
-    // hold still as they tick.
+    var F = root.fontScale
+    // Two columns: labels on the left, values right-aligned. The font is
+    // strictly monospace, so the ticking digits hold perfectly still.
     var rows = [
       ["TIME", Engine.formatTime(s.elapsed)],
       ["DIST", Math.floor(s.distance) + "M"],
       ["SPEED", Math.floor(s.speed) + "M/S"],
       ["STYLE", String(Math.floor(s.style))]
     ]
-    var labelW = Font.width("SPEED")
-    var valueW = Font.width("0:00:00.00")
-    var w = labelW + 4 + valueW + 6
-    var h = rows.length * 7 + 4
+    var labelW = Font.width("SPEED", F)
+    var valueW = Font.width("0:00:00.00", F)
+    var w = labelW + 2 * F + valueW + 8
+    var h = rows.length * root.lineH + 5
     var x = root.vw - w - 2
     ctx.fillStyle = root.ink
     ctx.fillRect(x - 1, 1, w + 2, h + 2)
@@ -289,8 +296,9 @@ FocusScope {
     ctx.fillRect(x, 2, w, h)
     ctx.fillStyle = root.ink
     for (var j = 0; j < rows.length; j++) {
-      Font.draw(ctx, x + 3, 4 + j * 7, rows[j][0])
-      Font.draw(ctx, x + w - 3 - Font.width(rows[j][1]), 4 + j * 7, rows[j][1])
+      Font.draw(ctx, x + 4, 5 + j * root.lineH, rows[j][0], F)
+      Font.draw(ctx, x + w - 4 - Font.width(rows[j][1], F),
+                5 + j * root.lineH, rows[j][1], F)
     }
   }
 
@@ -306,8 +314,9 @@ FocusScope {
     ctx.fillStyle = root.ink
     var y = Math.max(Sprites.height(Sprites.LOGO) + 8, root.skierY + 10)
     var tag = "SKI FREE. AVOID THE YETI."
-    Font.draw(ctx, Math.round(cx - Font.width(tag) / 2), y, tag)
-    y += 9
+    Font.draw(ctx, Math.round(cx - Font.width(tag, root.fontScale) / 2), y,
+              tag, root.fontScale)
+    y += root.lineH + 2
 
     var rest = [Sprites.VERSION, Sprites.HINT_NUMPAD, Sprites.HINT_KEYS]
     for (var i = 0; i < rest.length; i++) {
@@ -315,12 +324,13 @@ FocusScope {
       if (canvas.isImageLoaded(url)) {
         ctx.drawImage(url, Math.round(cx - Sprites.width(rest[i]) / 2), y)
       }
-      y += Sprites.height(rest[i]) + 4
+      y += Sprites.height(rest[i]) + 3
     }
     ctx.fillStyle = root.ink
     var hint = "PRESS ❎ TO SKI"
-    Font.draw(ctx, Math.round(cx - Font.width(hint) / 2),
-              Math.min(y + 3, root.vh - 10), hint)
+    Font.draw(ctx, Math.round(cx - Font.width(hint, root.fontScale) / 2),
+              Math.min(y + 2, root.vh - 5 * root.fontScale - 4), hint,
+              root.fontScale)
   }
 
   // ------------------------------------------------------------------------
