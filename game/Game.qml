@@ -276,19 +276,19 @@ FocusScope {
 
   function drawHud(ctx) {
     var s = root.sim
-    var F = root.fontScale
-    // Two columns: labels on the left, values right-aligned. The font is
-    // strictly monospace, so the ticking digits hold perfectly still.
+    // Two columns: labels on the left, values right-aligned. Drawn at 1px
+    // weight — the status box stays small — and the font is strictly
+    // monospace, so the ticking digits hold perfectly still.
     var rows = [
       ["TIME", Engine.formatTime(s.elapsed)],
       ["DIST", Math.floor(s.distance) + "M"],
       ["SPEED", Math.floor(s.speed) + "M/S"],
       ["STYLE", String(Math.floor(s.style))]
     ]
-    var labelW = Font.width("SPEED", F)
-    var valueW = Font.width("0:00:00.00", F)
-    var w = labelW + 2 * F + valueW + 8
-    var h = rows.length * root.lineH + 5
+    var labelW = Font.width("SPEED")
+    var valueW = Font.width("0:00:00.00")
+    var w = labelW + 4 + valueW + 6
+    var h = rows.length * 7 + 4
     var x = root.vw - w - 2
     ctx.fillStyle = root.ink
     ctx.fillRect(x - 1, 1, w + 2, h + 2)
@@ -296,9 +296,8 @@ FocusScope {
     ctx.fillRect(x, 2, w, h)
     ctx.fillStyle = root.ink
     for (var j = 0; j < rows.length; j++) {
-      Font.draw(ctx, x + 4, 5 + j * root.lineH, rows[j][0], F)
-      Font.draw(ctx, x + w - 4 - Font.width(rows[j][1], F),
-                5 + j * root.lineH, rows[j][1], F)
+      Font.draw(ctx, x + 3, 4 + j * 7, rows[j][0])
+      Font.draw(ctx, x + w - 3 - Font.width(rows[j][1]), 4 + j * 7, rows[j][1])
     }
   }
 
