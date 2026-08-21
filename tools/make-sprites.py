@@ -52,8 +52,8 @@ PALETTE = {
 # Sprite canvas sizes, kept identical to game/Sprites.js. At 8 px/metre these
 # give every object the same world-space footprint the classic had at 16.
 SIZES = {
-    1: (12, 19), 2: (16, 23), 3: (18, 17), 4: (16, 16), 5: (16, 23),
-    6: (18, 17), 7: (16, 16), 8: (12, 15), 9: (12, 15), 10: (12, 15),
+    1: (12, 19), 2: (16, 23), 3: (18, 16), 4: (16, 16), 5: (16, 23),
+    6: (18, 16), 7: (16, 16), 8: (12, 15), 9: (12, 15), 10: (12, 15),
     11: (12, 15), 12: (56, 30), 13: (18, 14), 14: (14, 18), 15: (14, 16),
     16: (14, 16), 17: (14, 17), 18: (16, 13), 19: (16, 16), 20: (16, 12),
     21: (13, 16), 22: (13, 16), 27: (32, 16), 28: (12, 12), 29: (12, 12),
@@ -337,8 +337,9 @@ def _skier_diag_l():
 
 
 # Two notches: a hard traverse. Arms tucked against the body, both poles
-# streaming out behind, and the long staggered skis dropping across the
-# hill at a proper 30 degrees — one row down for every two columns.
+# streaming out behind, and the skis dropping across the hill at a proper
+# 30 degrees — one row down for every two columns, with the tails behind
+# the boots running parallel to the tips out front.
 SKIER_TRAV_R = """
 .......rr.........
 ......rrrr........
@@ -350,24 +351,23 @@ dd..bbbbbbbb......
 ..ddbbbbbbbb......
 ......bbbb........
 ......nnnn........
-kk...nn.nn........
-..kkknn.nn........
+kk..knn.nn........
+..kk.nnknn........
 ....knnknnk.......
 ......kkkk........
 ........kkkk......
 ..........kkkk....
-............kkkk..
 """
 
 
 @sprite(3)
 def _skier_trav_r():
-    return place(SKIER_TRAV_R, 18, 17)
+    return place(SKIER_TRAV_R, 18, 16)
 
 
 @sprite(6)
 def _skier_trav_l():
-    return mirror(place(SKIER_TRAV_R, 18, 17))
+    return mirror(place(SKIER_TRAV_R, 18, 16))
 
 
 # Skis planted fully across the fall line: stopped. Two long level skis with
@@ -1384,7 +1384,8 @@ def mountain(dst, apex_x, apex_y, height, cap=6):
             if abs(i) >= j - 1 or j >= height - 1:
                 c = "n"                               # dark silhouette edge
             elif j < cap:
-                c = "w"
+                # Snow, dithered with grey so it still shows on white.
+                c = "w" if (x + y) % 2 else "s"
             elif j == cap:
                 c = "w" if (x + j) % 3 else "s"       # ragged snow edge
             elif j == cap + 1 and (x * 5 + j) % 7 == 0:
@@ -1404,10 +1405,10 @@ def mountain(dst, apex_x, apex_y, height, cap=6):
 @sprite(53)
 def _logo():
     # Mountains behind a fat Omarchy-green wordmark with a uniform 2px
-    # black outline.
+    # black outline. The snow caps cover the top half of each peak.
     dst = canvas(120, 44)
-    mountain(dst, 36, 0, 30)
-    mountain(dst, 88, 8, 22, cap=5)
+    mountain(dst, 36, 0, 30, cap=15)
+    mountain(dst, 88, 8, 22, cap=11)
     word = "OMARSKI"
     wx = (120 - text_width(word, 3)) // 2
     wy = 25
@@ -1416,6 +1417,10 @@ def _logo():
             if ox or oy:
                 draw_text(dst, wx + ox, wy + oy, word, "k", 3)
     draw_text(dst, wx, wy, word, "G", 3)
+    # A notch down from the top edge of the big M, leaving its middle
+    # vertex bridging the towers just below — so it reads as an M.
+    mx = wx + 4 * 3
+    fill_rect(dst, mx + 3, wy, mx + 6, wy + 4, "k")
     return dst
 
 
