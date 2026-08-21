@@ -374,7 +374,7 @@ FocusScope {
     var y = Math.max((Sprites.height(Sprites.LOGO) + 8) * P,
                      (root.skierY + 10) * P)
 
-    ctx.fillStyle = root.ink
+    ctx.fillStyle = "#29ADFF"   // the skier's jacket blue
     root.uiText(ctx, cx, y, "SKI FREE. AVOID THE YETI.")
     // The version line and everything below it sit together well down the
     // page, leaving open snow between the tagline and the hints.
