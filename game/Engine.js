@@ -61,7 +61,8 @@ var CRASH_GRACE = 0.6;           // immunity after standing back up
 
 var BUMP_SLOW = 0.55;            // fraction of speed kept over a mogul
 var BUMP_SECONDS = 0.5;          // how long the X-pose rattle lasts
-var BUMP_COOLDOWN = 0.9;         // no double-rattle from the same bump
+var BUMP_COOLDOWN = 0.35;        // no double-rattle from the same bump, but
+                                 // a mogul patch lands hit after hit
 
 // --- air -------------------------------------------------------------------
 // Tuned so the rainbow ramp gives a couple of seconds of air — long enough
@@ -129,6 +130,14 @@ var JUMPABLE = "jump";     // launches you (the rainbow ramp)
 var BUMP = "bump";         // rattles you and scrubs speed (moguls)
 var DECOR = "decor";       // pure scenery
 
+// The shape of a mogul patch, [dx, dy, big] in metres from the cell's spot —
+// two small, three mixed, two more below, echoing  o O / o O o / O o.
+var MOGUL_CLUSTER = [
+  [0.5, 0.0, 0], [3.0, 0.0, 1],
+  [-1.0, 2.2, 0], [2.0, 2.2, 1], [5.0, 2.2, 0],
+  [0.5, 4.4, 1], [3.5, 4.4, 0]
+];
+
 function obstacle(kind, sprite, x, y, extra) {
   var o = {
     kind: kind,
@@ -174,8 +183,9 @@ function objectsIn(minX, minY, maxX, maxY) {
       // Cumulative shares of the object mix.
       var tree = 0.36;
       var rock = tree + 0.15;
-      var mogul = rock + 0.24;
-      var ramp = mogul + 0.08;
+      var mogul = rock + 0.17;
+      var cluster = mogul + 0.06;
+      var ramp = cluster + 0.08;
       var patch = ramp + 0.06;
       var cloud = patch + 0.06;
 
@@ -197,6 +207,22 @@ function objectsIn(minX, minY, maxX, maxY) {
         out.push(obstacle(BUMP,
                           big ? Sprites.MOGUL_LARGE : Sprites.MOGUL_SMALL,
                           x, y, { hard: big }));
+      } else if (pick < cluster) {
+        // A whole patch of moguls piled together:   o O
+        // seven bumps, sometimes eight — the       o O o
+        // washboard stretches that rattle you       O o
+        // into the X and bleed your speed away.
+        for (var m = 0; m < MOGUL_CLUSTER.length; m++) {
+          var spot = MOGUL_CLUSTER[m];
+          if (inStartClearing(x + spot[0], y + spot[1])) continue;
+          out.push(obstacle(BUMP,
+                            spot[2] ? Sprites.MOGUL_LARGE : Sprites.MOGUL_SMALL,
+                            x + spot[0], y + spot[1], { hard: !!spot[2] }));
+        }
+        if (rand01(wx, wy, 10) < 0.5 && !inStartClearing(x + 6.0, y + 4.4)) {
+          out.push(obstacle(BUMP, Sprites.MOGUL_SMALL,
+                            x + 6.0, y + 4.4, { hard: false }));
+        }
       } else if (pick < ramp) {
         out.push(obstacle(JUMPABLE, Sprites.RAMP, x, y, { power: 1.0, ramp: true }));
       } else if (pick < patch) {

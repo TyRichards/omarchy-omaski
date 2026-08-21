@@ -258,6 +258,16 @@ function playTick(s, ev) {
   check('big dead trees grow on the hill',
         sprites.has(Sprites.TREE_DEAD_BIG_A) || sprites.has(Sprites.TREE_DEAD_BIG_B));
   check('stumps litter the hill', sprites.has(Sprites.STUMP));
+
+  // Mogul patches: somewhere out there, seven-plus bumps piled together.
+  const bumps = wide.filter(o => o.kind === Engine.BUMP);
+  let biggestPile = 0;
+  for (const b of bumps) {
+    const near = bumps.filter(o =>
+      Math.abs(o.x - b.x) < 6 && Math.abs(o.y - b.y) < 6).length;
+    biggestPile = Math.max(biggestPile, near);
+  }
+  check('moguls pile up in clusters', biggestPile >= 7, `${biggestPile} together`);
 }
 
 // --- 10. status box formatting matches the original -----------------------
