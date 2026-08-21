@@ -54,15 +54,15 @@ PALETTE = {
 SIZES = {
     1: (12, 19), 2: (16, 23), 3: (18, 17), 4: (16, 16), 5: (16, 23),
     6: (18, 17), 7: (16, 16), 8: (12, 15), 9: (12, 15), 10: (12, 15),
-    11: (12, 15), 12: (56, 30), 13: (16, 14), 14: (14, 18), 15: (14, 16),
+    11: (12, 15), 12: (56, 30), 13: (18, 14), 14: (14, 18), 15: (14, 16),
     16: (14, 16), 17: (14, 17), 18: (16, 13), 19: (16, 16), 20: (16, 12),
     21: (13, 16), 22: (13, 16), 27: (32, 16), 28: (12, 12), 29: (12, 12),
     30: (12, 12), 31: (12, 12), 32: (12, 12), 33: (11, 8), 34: (11, 8),
     35: (10, 10), 36: (10, 10), 37: (13, 15), 38: (10, 15), 39: (13, 16),
     40: (15, 15), 41: (16, 16), 42: (16, 16), 43: (13, 15), 44: (15, 13),
     45: (12, 6), 46: (8, 6), 47: (8, 3), 48: (12, 4), 49: (14, 16),
-    50: (11, 14), 51: (16, 32), 52: (16, 6), 53: (120, 44), 54: (88, 12),
-    55: (144, 26), 56: (96, 42), 64: (14, 32), 65: (13, 16), 66: (13, 16),
+    50: (11, 14), 51: (16, 32), 52: (16, 6), 53: (120, 44),
+    64: (14, 32), 65: (13, 16), 66: (13, 16),
     67: (13, 16), 68: (16, 24), 69: (16, 24), 70: (16, 24), 71: (16, 24),
     72: (16, 24), 73: (16, 24), 74: (16, 24), 75: (16, 24), 76: (16, 24),
     77: (16, 24), 78: (16, 24), 79: (16, 24), 80: (16, 24), 81: (16, 24),
@@ -465,45 +465,69 @@ def _skier_climb_r():
 
 @sprite(12)
 def _crash_burst():
-    # A proper comic-book starburst: nine spikes around a fat yellow core
-    # with a red rim. The crash word is drawn over it at runtime (at double
-    # scale), so the game can swap OUCH! for something saltier.
-    dst = canvas(56, 30)
+    # A Batman-style starburst: a straight-edged polygon of nine hard
+    # triangular spikes, yellow inside a thick orange outline. The crash
+    # word is drawn over it at runtime.
+    W, H = 56, 30
     cx, cy = 27.5, 14.5
-    for y in range(30):
-        for x in range(56):
-            dx, dy = (x - cx) / 1.95, (y - cy)
-            r = math.hypot(dx, dy)
-            a = math.atan2(dy, dx)
-            edge = 7.5 + 5.5 * abs(math.cos(a * 4.5)) ** 1.6
-            if r <= edge:
+    verts = []
+    for i in range(18):
+        a = i * math.pi / 9 + math.pi / 2      # one spike straight up
+        r = 13.5 if i % 2 == 0 else 8.0
+        verts.append((cx + math.cos(a) * r * 1.95, cy + math.sin(a) * r))
+
+    def inside(px, py):
+        hit = False
+        for i in range(len(verts)):
+            x1, y1 = verts[i]
+            x2, y2 = verts[(i + 1) % len(verts)]
+            if (y1 > py) != (y2 > py) and \
+               px < (x2 - x1) * (py - y1) / (y2 - y1) + x1:
+                hit = not hit
+        return hit
+
+    dst = canvas(W, H)
+    for y in range(H):
+        for x in range(W):
+            if inside(x + 0.5, y + 0.5):
                 dst[y][x] = "y"
-    return rim(dst, "y", "r")
+    # A bold outline: any yellow within two pixels of the edge goes orange.
+    out = [row[:] for row in dst]
+    for y in range(H):
+        for x in range(W):
+            if dst[y][x] != "y":
+                continue
+            for dy in range(-2, 3):
+                for dx in range(-2, 3):
+                    ny, nx = y + dy, x + dx
+                    if not (0 <= ny < H and 0 <= nx < W) or dst[ny][nx] == ".":
+                        out[y][x] = "o"
+    return out
 
 
-# Down in the snow: skis stuck upright in an upside-down V, poles leaning
-# beside them, the skier sat between — /\O/\.
+# Sprawled out in the snow: sitting down, ski tips thrown up and out in a
+# V behind him, arms and poles pointing down and out in an upside-down V.
 CRASH_SIT = """
-.......kk.......
-......k..k......
-.....k....k.....
-....k......k....
-...k..rr....k...
-.dk..rrrr..kd...
-.d...rrrr...d...
-..d..ffff..d....
-..d.bbbbbb.d....
-...dbbbbbbd.....
-...bbbbbbbb.....
-..nnnnnnnnnn....
-..nnnnnnnnnn....
-.ww........ww...
+kk..............kk
+.kk.....rr.....kk.
+..kk...rrrr...kk..
+...kk..rrrr..kk...
+....kk.ffff.kk....
+.....kbbbbbbk.....
+....bbbbbbbbbb....
+...bbb.bbbb.bbb...
+..bbb..bbbb..bbb..
+.dd....nnnn....dd.
+.d....nnnnnn....d.
+d....nnnnnnnn....d
+d...nnn....nnn...d
+....ww......ww....
 """
 
 
 @sprite(13)
 def _crash_sit():
-    return place(CRASH_SIT, 16, 14)
+    return place(CRASH_SIT, 18, 14)
 
 
 CRASH_SPRAWL = """
@@ -1395,30 +1419,9 @@ def _logo():
     return dst
 
 
-@sprite(54)
-def _version():
-    dst = canvas(88, 12)
-    draw_text(dst, (88 - text_width("VERSION 4.2", 2)) // 2, 1,
-              "VERSION 4.2", "k", 2)
-    return dst
-
-
-@sprite(55)
-def _hint_numpad():
-    dst = canvas(144, 26)
-    draw_text(dst, (144 - text_width("USE NUMPAD (0-9)", 2)) // 2, 1,
-              "USE NUMPAD (0-9)", "k", 2)
-    draw_text(dst, (144 - text_width("FOR BETTER CONTROL", 2)) // 2, 14,
-              "FOR BETTER CONTROL", "k", 2)
-    return dst
-
-
-@sprite(56)
-def _hint_keys():
-    dst = canvas(96, 42)
-    for i, line in enumerate(["Ⓞ = PAUSE", "F = FAST", "F2 = RESTART"]):
-        draw_text(dst, (96 - text_width(line, 2)) // 2, 1 + i * 13, line, "k", 2)
-    return dst
+# The version line and key hints are no longer baked sprites: the title
+# screen draws them at runtime with game/Font.js, so they can render at the
+# in-between UI text size.
 
 
 # --- the yeti --------------------------------------------------------------

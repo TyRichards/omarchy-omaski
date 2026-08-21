@@ -33,7 +33,7 @@ Version 3 repaints one item.)
 
 ## The artwork is original — and yours to redistribute
 
-Every one of the **85 sprites** in `assets/sprites/` — the skier in his red
+Every one of the **82 sprites** in `assets/sprites/` — the skier in his red
 beanie, the triangle-stacked trees, the big dead snags, the rainbow ramp, the
 chairlift, the barking dog, the deer (and what is left of one), the
 snowboarders, the crash starburst and every frame of the Abominable Snow

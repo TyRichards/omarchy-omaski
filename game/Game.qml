@@ -90,7 +90,7 @@ FocusScope {
     onTriggered: {
       root.events = []
       Engine.step(root.sim, interval / 1000, root.events)
-      canvas.requestPaint()
+      root.repaint()
     }
   }
 
@@ -110,6 +110,16 @@ FocusScope {
     // Repaint as sprites arrive so the title card fills in, and repaint on
     // resize (size changes mark the canvas dirty automatically).
     onImageLoaded: requestPaint()
+  }
+
+  // The UI text overlay: unscaled window resolution, so text can sit at a
+  // size between the integer steps available inside the world canvas.
+  Canvas {
+    id: uiCanvas
+    anchors.fill: parent
+    smooth: false
+    antialiasing: false
+    onPaint: root.drawUi()
   }
 
   // ------------------------------------------------------------------------
@@ -142,26 +152,42 @@ FocusScope {
                   sy(worldY) - Sprites.height(id) - (lift || 0))
   }
 
-  // All UI text renders at double scale — chunky, like PICO-8's own menus.
-  readonly property int fontScale: 2
-  readonly property int lineH: 5 * fontScale + 3
+  // UI text lives on an unscaled overlay canvas at 1.5x the world pixel
+  // size — halfway between the tiny status box and full double scale.
+  // Because the overlay is in window pixels, every glyph pixel is still a
+  // crisp integer number of screen pixels.
+  readonly property int uiScale: Math.max(2, Math.round(root.pixelScale * 3 / 2))
 
-  // A bordered panel of centred text lines, PICO-8 style.
-  function panel(ctx, cx, top, lines) {
+  function repaint() {
+    canvas.requestPaint()
+    uiCanvas.requestPaint()
+  }
+
+  // Centred overlay text; cx is the centre, in window pixels.
+  function uiText(ctx, cx, top, text) {
+    Font.draw(ctx, Math.round(cx - Font.width(text, root.uiScale) / 2),
+              Math.round(top), text, root.uiScale)
+  }
+
+  // A bordered panel of centred text lines on the overlay, PICO-8 style.
+  function uiPanel(ctx, cx, top, lines) {
+    var U = root.uiScale
+    var P = root.pixelScale
+    var lh = 6 * U
     var w = 0
     for (var i = 0; i < lines.length; i++)
-      w = Math.max(w, Font.width(lines[i], root.fontScale))
-    w += 10
-    var h = lines.length * root.lineH + 6
+      w = Math.max(w, Font.width(lines[i], U))
+    w += 6 * P
+    var h = lines.length * lh + 3 * P
     var x = Math.round(cx - w / 2)
     ctx.fillStyle = root.ink
-    ctx.fillRect(x - 1, top - 1, w + 2, h + 2)
+    ctx.fillRect(x - P, top - P, w + 2 * P, h + 2 * P)
     ctx.fillStyle = root.snow
     ctx.fillRect(x, top, w, h)
     ctx.fillStyle = root.ink
     for (var j = 0; j < lines.length; j++) {
-      Font.draw(ctx, Math.round(cx - Font.width(lines[j], root.fontScale) / 2),
-                top + 4 + j * root.lineH, lines[j], root.fontScale)
+      Font.draw(ctx, Math.round(cx - Font.width(lines[j], U) / 2),
+                top + 2 * P + j * lh, lines[j], U)
     }
   }
 
@@ -189,17 +215,11 @@ FocusScope {
     }
 
     // --- dogs, deer, snowboarders and other skiers ------------------------
+    // (a close dog's WOOF! text is drawn by the overlay)
     for (var k = 0; k < s.critters.length; k++) {
       var cr = s.critters[k]
       var frame = Engine.critterSprite(cr)
       root.mirrored(ctx, frame[0], frame[1], cr.x, cr.y, 0)
-      if (cr.bark && !cr.down) {
-        // The dog pipes up when you get close.
-        ctx.fillStyle = root.ink
-        Font.draw(ctx, sx(cr.x) - (Font.width("WOOF!", root.fontScale) >> 1),
-                  sy(cr.y) - Sprites.height(frame[0]) - 5 * root.fontScale - 4,
-                  "WOOF!", root.fontScale)
-      }
     }
 
     // --- the skier --------------------------------------------------------
@@ -213,20 +233,14 @@ FocusScope {
       root.mirrored(ctx, pose[0], pose[1], s.x, s.y,
                     Math.round(s.height * PX))
       if (s.crashed) {
-        // The starburst, shouting its randomly chosen word.
-        var burstTop = sy(s.y) - Sprites.height(s.crashSprite)
-                     - Sprites.height(Sprites.CRASH_OUCH) - 2
+        // The starburst; its word is drawn by the overlay.
         var burstUrl = root.spriteUrl(Sprites.CRASH_OUCH)
         if (canvas.isImageLoaded(burstUrl)) {
           ctx.drawImage(burstUrl,
                         sx(s.x) - (Sprites.width(Sprites.CRASH_OUCH) >> 1),
-                        burstTop)
+                        sy(s.y) - Sprites.height(s.crashSprite)
+                        - Sprites.height(Sprites.CRASH_OUCH) - 2)
         }
-        ctx.fillStyle = root.ink
-        Font.draw(ctx, sx(s.x) - (Font.width(s.crashWord, root.fontScale) >> 1),
-                  burstTop + ((Sprites.height(Sprites.CRASH_OUCH)
-                               - 5 * root.fontScale) >> 1),
-                  s.crashWord, root.fontScale)
       }
     }
 
@@ -242,17 +256,51 @@ FocusScope {
     }
 
     // --- overlays ---------------------------------------------------------
+    // (panels and title text live on the UI overlay canvas)
     if (root.hudVisible && root.started) root.drawHud(ctx)
     if (!root.started) root.drawTitle(ctx)
+  }
+
+  // Everything drawn at the UI text size, in window pixels.
+  function drawUi() {
+    var ctx = uiCanvas.getContext("2d")
+    ctx.clearRect(0, 0, uiCanvas.width, uiCanvas.height)
+    var s = root.sim
+    var P = root.pixelScale
+    var U = root.uiScale
+    ctx.fillStyle = root.ink
+
+    if (root.started) {
+      // A close dog pipes up.
+      for (var k = 0; k < s.critters.length; k++) {
+        var cr = s.critters[k]
+        if (!cr.bark || cr.down) continue
+        var frame = Engine.critterSprite(cr)
+        root.uiText(ctx, sx(cr.x) * P,
+                    (sy(cr.y) - Sprites.height(frame[0]) - 3) * P - 5 * U,
+                    "WOOF!")
+      }
+
+      // The crash word, centred on the starburst.
+      if (s.crashed && !s.eaten) {
+        var burstMid = (sy(s.y) - Sprites.height(s.crashSprite) - 2
+                        - Sprites.height(Sprites.CRASH_OUCH) / 2) * P
+        root.uiText(ctx, sx(s.x) * P, burstMid - 5 * U / 2, s.crashWord)
+      }
+    }
+
+    if (!root.started) root.drawTitleText(ctx)
 
     if (s.paused) {
-      panel(ctx, root.vw / 2, Math.round(root.vh / 2 - 8),
-            ["PAUSED - Ⓞ TO SKI"])
+      root.uiPanel(ctx, uiCanvas.width / 2,
+                   Math.round(uiCanvas.height / 2 - 8 * P),
+                   ["PAUSED - Ⓞ TO SKI"])
     }
 
     if (s.over) {
-      panel(ctx, root.vw / 2, Math.round(root.vh * 0.72),
-            ["You have been eaten.", "F2 to restart"])
+      root.uiPanel(ctx, uiCanvas.width / 2,
+                   Math.round(uiCanvas.height * 0.72),
+                   ["YOU HAVE BEEN EATEN.", "F2 TO RESTART"])
     }
   }
 
@@ -301,35 +349,43 @@ FocusScope {
     }
   }
 
+  // The world-canvas half of the title screen: just the logo, riding high
+  // so the skier stands in clear view below it.
   function drawTitle(ctx) {
-    // The logo rides high and the text sits low, so the skier himself is
-    // in clear view between them, waiting at the start.
-    var cx = root.vw / 2
     var logoUrl = root.spriteUrl(Sprites.LOGO)
     if (canvas.isImageLoaded(logoUrl)) {
-      ctx.drawImage(logoUrl, Math.round(cx - Sprites.width(Sprites.LOGO) / 2), 2)
+      ctx.drawImage(logoUrl,
+                    Math.round(root.vw / 2 - Sprites.width(Sprites.LOGO) / 2), 2)
     }
+  }
+
+  // The overlay half: tagline, version, hints and the start prompt, all in
+  // the PICO-8 font at the UI size, below the skier.
+  function drawTitleText(ctx) {
+    var P = root.pixelScale
+    var U = root.uiScale
+    var cx = uiCanvas.width / 2
+    var lh = 6 * U
+    var y = Math.max((Sprites.height(Sprites.LOGO) + 8) * P,
+                     (root.skierY + 10) * P)
 
     ctx.fillStyle = root.ink
-    var y = Math.max(Sprites.height(Sprites.LOGO) + 8, root.skierY + 10)
-    var tag = "SKI FREE. AVOID THE YETI."
-    Font.draw(ctx, Math.round(cx - Font.width(tag, root.fontScale) / 2), y,
-              tag, root.fontScale)
-    y += root.lineH + 2
-
-    var rest = [Sprites.VERSION, Sprites.HINT_NUMPAD, Sprites.HINT_KEYS]
-    for (var i = 0; i < rest.length; i++) {
-      var url = root.spriteUrl(rest[i])
-      if (canvas.isImageLoaded(url)) {
-        ctx.drawImage(url, Math.round(cx - Sprites.width(rest[i]) / 2), y)
-      }
-      y += Sprites.height(rest[i]) + 3
-    }
+    root.uiText(ctx, cx, y, "SKI FREE. AVOID THE YETI.")
+    y += lh + U
+    ctx.fillStyle = root.inkSoft
+    root.uiText(ctx, cx, y, "VERSION 4.5")
+    y += lh + U
     ctx.fillStyle = root.ink
-    var hint = "PRESS ❎ TO SKI"
-    Font.draw(ctx, Math.round(cx - Font.width(hint, root.fontScale) / 2),
-              Math.min(y + 2, root.vh - 5 * root.fontScale - 4), hint,
-              root.fontScale)
+    root.uiText(ctx, cx, y, "USE NUMPAD (0-9)")
+    y += lh
+    root.uiText(ctx, cx, y, "FOR BETTER CONTROL")
+    y += lh + U
+    root.uiText(ctx, cx, y, "Ⓞ = PAUSE   F = FAST")
+    y += lh
+    root.uiText(ctx, cx, y, "F2 = RESTART")
+    y += lh + lh / 2
+    root.uiText(ctx, cx, Math.min(y, uiCanvas.height - 6 * U),
+                "PRESS ❎ TO SKI")
   }
 
   // ------------------------------------------------------------------------
@@ -342,7 +398,7 @@ FocusScope {
     root.sim = Engine.createState()
     root.sim.viewAbove = root.skierY / Engine.PIXELS_PER_METRE
     root.started = false
-    canvas.requestPaint()
+    root.repaint()
   }
 
   Keys.onPressed: function (event) {
@@ -415,7 +471,7 @@ FocusScope {
     case Qt.Key_Escape:
       Qt.quit(); break
     }
-    canvas.requestPaint()
+    root.repaint()
   }
 
   Keys.onReleased: function (event) {
@@ -467,7 +523,7 @@ FocusScope {
       root.forceActiveFocus()
       root.started = true
       if (mouse.button === Qt.LeftButton) Engine.jump(root.sim, root.events)
-      canvas.requestPaint()
+      root.repaint()
     }
   }
 }

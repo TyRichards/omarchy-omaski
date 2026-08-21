@@ -281,7 +281,7 @@ function playTick(s, ev) {
 // --- 11. sprite catalog integrity -----------------------------------------
 {
   const ids = Object.keys(Sprites.SIZES).map(Number);
-  check('85 sprites catalogued', ids.length === 85, `${ids.length}`);
+  check('82 sprites catalogued', ids.length === 82, `${ids.length}`);
   check('7 skier headings', Sprites.SKIER_BY_HEADING.length === 7);
   const missing = Sprites.SKIER_BY_HEADING.filter(e => !Sprites.SIZES[e[0]]);
   check('every heading has a sprite', missing.length === 0);
