@@ -1439,10 +1439,15 @@ def _logo():
     # middle vertex bridging the towers just below — so it reads as an M.
     mx = wx + 4 * 3
     fill_rect(dst, mx + 3, wy, mx + 6, wy + 2, "k")
-    # Thicken the R where its bowl meets the leg, so the right side holds
-    # the same weight as every other stroke.
+    # Thicken the R where its bowl meets the leg, but bite a black notch
+    # into its far right edge there — that notch is what says R, not A.
     rx = wx + 3 * 4 * 3
-    fill_rect(dst, rx + 7, wy + 6, rx + 9, wy + 9, "G")
+    fill_rect(dst, rx + 6, wy + 6, rx + 8, wy + 9, "G")
+    fill_rect(dst, rx + 8, wy + 6, rx + 9, wy + 9, "k")
+    # One mountain pixel leaks through the outline at the S's top-left
+    # corner; ink it over.
+    sx4 = wx + 4 * 4 * 3
+    fill_rect(dst, sx4, wy, sx4 + 1, wy + 1, "k")
     return dst
 
 
