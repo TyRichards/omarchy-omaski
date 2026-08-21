@@ -345,8 +345,10 @@ function playTick(s, ev) {
   check('the deer bursts', v.critters[0].splat);
   const [splatId] = Engine.critterSprite(v.critters[0]);
   check('the burst has a sprite', splatId === Sprites.DEER_SPLAT_A);
+  // A fresh critter may wander in during the wait, so look specifically
+  // for the splatted remains rather than any deer at all.
   for (let i = 0; i < 60 * 3; i++) Engine.step(v, dt, ev);
-  check('the remains soak away', !v.critters.some(c => c.kind === Engine.CRITTER_DEER));
+  check('the remains soak away', !v.critters.some(c => c.splat));
 
   // Dogs bark when the skier is close.
   const w = Engine.createState();
