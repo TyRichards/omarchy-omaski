@@ -82,7 +82,7 @@ slalom modes. It is one mode — down the hill.
 
 | Key | Action |
 |---|---|
-| Arrows / `WASD` | Steer |
+| Arrows / `WASD` | Steer — hold `Down`/`S` to tuck: straight downhill at full F-speed |
 | Numpad `1`–`9` | Absolute heading — "Use NumPad (0-9) for better control" |
 | `X` (❎), `Space`, `Up`, `Insert`, left click | Jump — steer in the air to work a backflip |
 | Mouse | Steer toward the pointer |
@@ -135,7 +135,7 @@ monster rule — that he eats you at normal speed and that `F` gets you away.
 node test/test-run.mjs
 ```
 
-71 checks, all green.
+72 checks, all green.
 
 There is also a debug hook for exercising the late game without skiing two
 kilometres by hand:

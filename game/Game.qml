@@ -361,7 +361,10 @@ FocusScope {
       Engine.turn(s, 1); break
     case Qt.Key_Down:
     case Qt.Key_S:
-      Engine.setHeading(s, 0); break
+      // Holding down is a tuck: straight downhill at full F-speed.
+      Engine.setHeading(s, 0)
+      s.fast = true
+      break
 
     // --- jump (❎ in PICO-8 terms) ---------------------------------------
     case Qt.Key_Up:
@@ -416,9 +419,14 @@ FocusScope {
   }
 
   Keys.onReleased: function (event) {
+    // A held key auto-repeats as press/release pairs; only the real
+    // release may switch anything off, or fast mode would flicker.
+    if (event.isAutoRepeat) return
     var s = root.sim
     switch (event.key) {
     case Qt.Key_F:
+    case Qt.Key_Down:
+    case Qt.Key_S:
       s.fast = false; break
     case Qt.Key_Home:
     case Qt.Key_PageUp:
