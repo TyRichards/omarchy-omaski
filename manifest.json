@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.tyrichards.omarski",
   "name": "Omarski",
-  "version": "4.7.1",
+  "version": "4.7.2",
   "author": "Ty Richards",
   "license": "MIT",
   "description": "A faithful SkiFree-style skiing game for Omarchy in a chunky PICO-8-flavoured style, with all-original artwork. Opens as a square 1:1 window.",
