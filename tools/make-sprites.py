@@ -62,7 +62,7 @@ SIZES = {
     40: (15, 15), 41: (16, 16), 42: (16, 16), 43: (13, 15), 44: (15, 13),
     45: (12, 6), 46: (8, 6), 47: (8, 3), 48: (12, 4), 49: (14, 16),
     50: (11, 14), 51: (16, 32), 52: (16, 6), 53: (120, 44), 54: (88, 12),
-    55: (144, 26), 56: (96, 42), 64: (12, 32), 65: (13, 16), 66: (13, 16),
+    55: (144, 26), 56: (96, 42), 64: (14, 32), 65: (13, 16), 66: (13, 16),
     67: (13, 16), 68: (16, 24), 69: (16, 24), 70: (16, 24), 71: (16, 24),
     72: (16, 24), 73: (16, 24), 74: (16, 24), 75: (16, 24), 76: (16, 24),
     77: (16, 24), 78: (16, 24), 79: (16, 24), 80: (16, 24), 81: (16, 24),
@@ -971,16 +971,48 @@ ffBBBBf.
 # --- chairlift -------------------------------------------------------------
 
 
+# A proper A-frame pylon: twin tube legs spreading toward the ground,
+# cross-braced every few metres, a full-width crossarm on top with yellow
+# cable sheaves hanging at each end, concrete footings at the base.
+LIFT_TOWER = """
+ssssssssssssss
+dddddddddddddd
+yy..........yy
+yy..........yy
+....sd..sd....
+....sd..sd....
+....sdddsd....
+...sd....sd...
+...sd....sd...
+...sd....sd...
+...sddddddd...
+...sd....sd...
+..sd......sd..
+..sd......sd..
+..sd......sd..
+..sddddddddd..
+..sd......sd..
+..sd......sd..
+.sd........sd.
+.sd........sd.
+.sd........sd.
+.sddddddddddd.
+.sd........sd.
+.sd........sd.
+sd..........sd
+sd..........sd
+sd..........sd
+sd..........sd
+sd..........sd
+dd..........dd
+sss........sss
+sss........sss
+"""
+
+
 @sprite(64)
 def _lift_tower():
-    dst = canvas(12, 32)
-    fill_rect(dst, 0, 1, 12, 2, "d")            # crossarm
-    fill_rect(dst, 1, 0, 2, 3, "s")             # sheaves
-    fill_rect(dst, 10, 0, 11, 3, "s")
-    for y in range(2, 30):                       # lattice mast
-        dst[y][5] = dst[y][6] = "s" if y % 3 else "d"
-    fill_rect(dst, 3, 30, 9, 32, "d")            # footing
-    return dst
+    return place(LIFT_TOWER, 14, 32)
 
 
 def chair(riders):
