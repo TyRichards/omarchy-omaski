@@ -1373,33 +1373,54 @@ def _boarder_crash_d():
 
 
 def mountain(dst, apex_x, apex_y, height, cap=6):
-    """A snow-capped peak: white cap with a jagged snowline, grey faces with
-    the right flank in shadow, all held together by a dark outline so it
-    still reads against the snow."""
+    """A craggy peak, not a plain triangle: the flanks change pitch on the
+    way down and bench out into shoulders, the snow cap covers the top with
+    a hard chevron-zigzag hem, and the whole thing wears a bold 2px black
+    outline to match the wordmark."""
+    W, H = len(dst[0]), len(dst)
+    tmp = canvas(W, H)
+    lx = rx = 0.0
     for j in range(height):
-        for i in range(-j, j + 1):
-            x, y = apex_x + i, apex_y + j
-            if not (0 <= x < len(dst[0]) and 0 <= y < len(dst)):
+        t = j / float(height)
+        # Pitch varies down each face, and each side benches out once.
+        ls = 0.65 if t < 0.3 else 1.35 if t < 0.6 else 1.0
+        rs = 1.15 if t < 0.25 else 0.6 if t < 0.5 else 1.35
+        if int(height * 0.50) <= j <= int(height * 0.50) + 1:
+            ls = 0.15
+        if int(height * 0.68) <= j <= int(height * 0.68) + 1:
+            rs = 0.2
+        lx += ls
+        rx += rs
+        y = apex_y + j
+        if not (0 <= y < H):
+            continue
+        for x in range(apex_x - int(lx), apex_x + int(rx) + 1):
+            if not (0 <= x < W):
                 continue
-            if abs(i) >= j - 1 or j >= height - 1:
-                c = "n"                               # dark silhouette edge
-            elif j < cap:
-                # Snow, dithered with grey so it still shows on white.
+            hem = cap + (0, 1, 2, 3, 2, 1)[x % 6]
+            if j < hem:
+                # Snow, dithered with grey so it shows on the white field.
                 c = "w" if (x + y) % 2 else "s"
-            elif j == cap:
-                c = "w" if (x + j) % 3 else "s"       # ragged snow edge
-            elif j == cap + 1 and (x * 5 + j) % 7 == 0:
-                c = "w"                               # stray snow below it
             else:
-                c = "d" if i > (j * 2) // 3 else "s"  # sunlit / shadowed
-            dst[y][x] = c
+                c = "d" if (x - apex_x) > int(rx) * 0.35 else "s"
+            tmp[y][x] = c
     # A ridge crease running down the sunlit face.
-    for j in range(cap + 1, height - 1):
+    for j in range(cap + 3, height - 2):
         x = apex_x - j // 2
         y = apex_y + j
-        if 0 <= x < len(dst[0]) and 0 <= y < len(dst) and dst[y][x] == "s":
-            dst[y][x] = "d"
-    return dst
+        if 0 <= x < W and 0 <= y < H and tmp[y][x] == "s":
+            tmp[y][x] = "d"
+    # The bold outline: anything within two pixels of the edge goes black.
+    for y in range(H):
+        for x in range(W):
+            if tmp[y][x] == ".":
+                continue
+            for dy in range(-2, 3):
+                for dx in range(-2, 3):
+                    ny, nx = y + dy, x + dx
+                    if not (0 <= ny < H and 0 <= nx < W) or tmp[ny][nx] == ".":
+                        tmp[y][x] = "k"
+    return blit(dst, tmp, 0, 0)
 
 
 @sprite(53)
@@ -1407,8 +1428,8 @@ def _logo():
     # Mountains behind a fat Omarchy-green wordmark with a uniform 2px
     # black outline. The snow caps cover the top half of each peak.
     dst = canvas(120, 44)
-    mountain(dst, 36, 0, 30, cap=15)
-    mountain(dst, 88, 8, 22, cap=11)
+    mountain(dst, 46, 0, 30, cap=15)
+    mountain(dst, 78, 8, 22, cap=11)
     word = "OMARSKI"
     wx = (120 - text_width(word, 3)) // 2
     wy = 25
@@ -1417,10 +1438,14 @@ def _logo():
             if ox or oy:
                 draw_text(dst, wx + ox, wy + oy, word, "k", 3)
     draw_text(dst, wx, wy, word, "G", 3)
-    # A notch down from the top edge of the big M, leaving its middle
-    # vertex bridging the towers just below — so it reads as an M.
+    # A shallow notch down from the top edge of the big M, leaving its
+    # middle vertex bridging the towers just below — so it reads as an M.
     mx = wx + 4 * 3
-    fill_rect(dst, mx + 3, wy, mx + 6, wy + 4, "k")
+    fill_rect(dst, mx + 3, wy, mx + 6, wy + 2, "k")
+    # Thicken the R where its bowl meets the leg, so the right side holds
+    # the same weight as every other stroke.
+    rx = wx + 3 * 4 * 3
+    fill_rect(dst, rx + 7, wy + 6, rx + 9, wy + 9, "G")
     return dst
 
 

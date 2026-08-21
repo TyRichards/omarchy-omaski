@@ -355,7 +355,7 @@ FocusScope {
     var logoUrl = root.spriteUrl(Sprites.LOGO)
     if (canvas.isImageLoaded(logoUrl)) {
       ctx.drawImage(logoUrl,
-                    Math.round(root.vw / 2 - Sprites.width(Sprites.LOGO) / 2), 2)
+                    Math.round(root.vw / 2 - Sprites.width(Sprites.LOGO) / 2), 8)
     }
   }
 
