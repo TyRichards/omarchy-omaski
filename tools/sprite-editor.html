@@ -23,6 +23,7 @@
 <h1>Omarski sprite editor</h1>
 
 <div class="row">
+  <label>Sprite: <select id="pick"><option value="">-- choose --</option></select></label>
   <label>PNG: <input type="file" id="file" accept=".png"></label>
   <label>or blank: <input id="bw" type="number" value="16" min="1" max="128" style="width:4em">
     x <input id="bh" type="number" value="16" min="1" max="128" style="width:4em"></label>
@@ -44,6 +45,7 @@
 </div>
 <textarea id="out" spellcheck="false"></textarea>
 
+<script src="sprite-data.js"></script>
 <script>
 // Same table as tools/make-sprites.py PALETTE. "." is transparent.
 const PALETTE = {
@@ -141,6 +143,35 @@ window.addEventListener("keydown", ev => {
 });
 
 // --- load / new / copy ------------------------------------------------------
+function loadAscii(text) {
+  const lines = text.split("\n").map(l => l.trim()).filter(l => l);
+  if (!lines.length) return;
+  const w = Math.max(...lines.map(l => l.length));
+  grid = lines.map(l => l.padEnd(w, ".").split("")
+    .map(ch => (ch === "." || PALETTE[ch]) ? ch : "."));
+  undoStack = [];
+  repaint();
+}
+
+const pick = document.getElementById("pick");
+if (typeof SPRITE_DATA !== "undefined") {
+  for (const name of Object.keys(SPRITE_DATA)) {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    pick.appendChild(opt);
+  }
+  pick.onchange = () => {
+    if (pick.value) {
+      loadAscii(SPRITE_DATA[pick.value]);
+      status.textContent += "  (" + pick.value + ")";
+    }
+  };
+} else {
+  pick.disabled = true;
+  pick.title = "run tools/make-sprites.py to generate sprite-data.js";
+}
+
 document.getElementById("blank").onclick = () => {
   const w = +document.getElementById("bw").value || 16;
   const h = +document.getElementById("bh").value || 16;
@@ -149,17 +180,7 @@ document.getElementById("blank").onclick = () => {
   repaint();
 };
 
-document.getElementById("fromText").onclick = () => {
-  const lines = out.value.split("\n").map(l => l.trim()).filter(l => l);
-  if (!lines.length) return;
-  const w = Math.max(...lines.map(l => l.length));
-  grid = lines.map(l => {
-    const row = l.padEnd(w, ".").split("");
-    return row.map(ch => (ch === "." || PALETTE[ch]) ? ch : ".");
-  });
-  undoStack = [];
-  repaint();
-};
+document.getElementById("fromText").onclick = () => loadAscii(out.value);
 
 document.getElementById("file").onchange = ev => {
   const f = ev.target.files[0];
