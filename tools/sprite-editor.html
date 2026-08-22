@@ -1,0 +1,220 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Omarski sprite editor</title>
+<style>
+  body { font-family: monospace; background: #222; color: #eee; margin: 16px; }
+  h1 { font-size: 16px; }
+  .row { margin: 8px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  button, input { font-family: monospace; }
+  #palette { display: flex; gap: 4px; flex-wrap: wrap; }
+  .swatch {
+    width: 28px; height: 28px; border: 2px solid #555; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-weight: bold;
+  }
+  .swatch.sel { border-color: #fff; outline: 2px solid #fff; }
+  #grid { image-rendering: pixelated; cursor: crosshair; border: 1px solid #555; }
+  textarea { width: 100%; height: 200px; background: #111; color: #0f0; }
+  .hint { color: #999; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Omarski sprite editor</h1>
+
+<div class="row">
+  <label>PNG: <input type="file" id="file" accept=".png"></label>
+  <label>or blank: <input id="bw" type="number" value="16" min="1" max="128" style="width:4em">
+    x <input id="bh" type="number" value="16" min="1" max="128" style="width:4em"></label>
+  <button id="blank">New</button>
+  <button id="fromText">Load ASCII from box below</button>
+</div>
+
+<div class="row" id="palette"></div>
+<div class="hint">left click/drag = paint &nbsp; | &nbsp; right click/drag = erase &nbsp; | &nbsp; Ctrl+Z = undo</div>
+
+<div class="row">
+  <canvas id="grid"></canvas>
+</div>
+
+<div class="row">
+  <button id="copy">Copy ASCII</button>
+  <button id="bg">Background: checker</button>
+  <span id="status" class="hint"></span>
+</div>
+<textarea id="out" spellcheck="false"></textarea>
+
+<script>
+// Same table as tools/make-sprites.py PALETTE. "." is transparent.
+const PALETTE = {
+  k: "#000000", n: "#1D2B53", v: "#7E2553", e: "#008751",
+  B: "#AB5236", d: "#5F574F", s: "#C2C3C7", w: "#FFF1E8",
+  r: "#FF004D", o: "#FFA300", y: "#FFEC27", g: "#00E436",
+  b: "#29ADFF", l: "#83769C", m: "#FF77A8", f: "#FFCCAA",
+  G: "#9ECE6A",
+};
+
+let grid = Array.from({length: 16}, () => Array(16).fill("."));
+let color = "k";           // selected palette char
+let snowBg = false;
+let drawing = null;        // "paint" | "erase" while mouse is down
+let undoStack = [];
+
+const canvas = document.getElementById("grid");
+const ctx = canvas.getContext("2d");
+const out = document.getElementById("out");
+const status = document.getElementById("status");
+
+// --- palette swatches -------------------------------------------------------
+const palDiv = document.getElementById("palette");
+for (const ch of [...Object.keys(PALETTE), "."]) {
+  const el = document.createElement("div");
+  el.className = "swatch";
+  el.dataset.ch = ch;
+  if (ch === ".") { el.textContent = "."; el.title = "transparent (eraser)"; }
+  else {
+    el.style.background = PALETTE[ch];
+    el.textContent = ch;
+    el.style.color = ["k","n","v","e","d"].includes(ch) ? "#fff" : "#000";
+    el.title = ch;
+  }
+  el.onclick = () => { color = ch; select(el); };
+  palDiv.appendChild(el);
+}
+function select(el) {
+  palDiv.querySelectorAll(".swatch").forEach(s => s.classList.remove("sel"));
+  el.classList.add("sel");
+}
+select(palDiv.firstChild);
+
+// --- drawing ----------------------------------------------------------------
+function pxSize() {
+  const m = Math.max(grid[0].length, grid.length);
+  return Math.max(6, Math.min(36, Math.floor(680 / m)));
+}
+function repaint() {
+  const P = pxSize(), w = grid[0].length, h = grid.length;
+  canvas.width = w * P; canvas.height = h * P;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const ch = grid[y][x];
+    if (ch === ".") {
+      ctx.fillStyle = snowBg ? "#FFF1E8" : ((x + y) % 2 ? "#333" : "#3c3c3c");
+    } else {
+      ctx.fillStyle = PALETTE[ch] || "#f0f";
+    }
+    ctx.fillRect(x * P, y * P, P, P);
+  }
+  ctx.strokeStyle = "rgba(128,128,128,0.25)";
+  for (let x = 0; x <= w; x++) { ctx.beginPath(); ctx.moveTo(x*P, 0); ctx.lineTo(x*P, h*P); ctx.stroke(); }
+  for (let y = 0; y <= h; y++) { ctx.beginPath(); ctx.moveTo(0, y*P); ctx.lineTo(w*P, y*P); ctx.stroke(); }
+  out.value = grid.map(r => r.join("")).join("\n");
+  status.textContent = w + " x " + h;
+}
+function cell(ev) {
+  const rect = canvas.getBoundingClientRect(), P = pxSize();
+  const x = Math.floor((ev.clientX - rect.left) / P);
+  const y = Math.floor((ev.clientY - rect.top) / P);
+  if (y < 0 || y >= grid.length || x < 0 || x >= grid[0].length) return null;
+  return {x, y};
+}
+function apply(ev) {
+  const c = cell(ev);
+  if (!c) return;
+  grid[c.y][c.x] = drawing === "erase" ? "." : color;
+  repaint();
+}
+canvas.addEventListener("contextmenu", ev => ev.preventDefault());
+canvas.addEventListener("mousedown", ev => {
+  undoStack.push(grid.map(r => r.slice()));
+  if (undoStack.length > 100) undoStack.shift();
+  drawing = ev.button === 2 ? "erase" : (color === "." ? "erase" : "paint");
+  apply(ev);
+});
+canvas.addEventListener("mousemove", ev => { if (drawing) apply(ev); });
+window.addEventListener("mouseup", () => { drawing = null; });
+window.addEventListener("keydown", ev => {
+  if ((ev.ctrlKey || ev.metaKey) && ev.key === "z" && undoStack.length) {
+    grid = undoStack.pop();
+    repaint();
+    ev.preventDefault();
+  }
+});
+
+// --- load / new / copy ------------------------------------------------------
+document.getElementById("blank").onclick = () => {
+  const w = +document.getElementById("bw").value || 16;
+  const h = +document.getElementById("bh").value || 16;
+  grid = Array.from({length: h}, () => Array(w).fill("."));
+  undoStack = [];
+  repaint();
+};
+
+document.getElementById("fromText").onclick = () => {
+  const lines = out.value.split("\n").map(l => l.trim()).filter(l => l);
+  if (!lines.length) return;
+  const w = Math.max(...lines.map(l => l.length));
+  grid = lines.map(l => {
+    const row = l.padEnd(w, ".").split("");
+    return row.map(ch => (ch === "." || PALETTE[ch]) ? ch : ".");
+  });
+  undoStack = [];
+  repaint();
+};
+
+document.getElementById("file").onchange = ev => {
+  const f = ev.target.files[0];
+  if (!f) return;
+  const img = new Image();
+  img.onload = () => {
+    const c = document.createElement("canvas");
+    c.width = img.width; c.height = img.height;
+    const cx = c.getContext("2d");
+    cx.drawImage(img, 0, 0);
+    const data = cx.getImageData(0, 0, img.width, img.height).data;
+    // exact match first, nearest palette colour as fallback
+    const exact = {};
+    for (const [ch, hex] of Object.entries(PALETTE)) {
+      exact[parseInt(hex.slice(1), 16)] = ch;
+    }
+    grid = [];
+    for (let y = 0; y < img.height; y++) {
+      const row = [];
+      for (let x = 0; x < img.width; x++) {
+        const i = (y * img.width + x) * 4;
+        if (data[i + 3] < 128) { row.push("."); continue; }
+        const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
+        if (exact[key]) { row.push(exact[key]); continue; }
+        let best = "k", bd = Infinity;
+        for (const [ch, hex] of Object.entries(PALETTE)) {
+          const v = parseInt(hex.slice(1), 16);
+          const dr = data[i] - (v >> 16), dg = data[i+1] - ((v >> 8) & 255), db = data[i+2] - (v & 255);
+          const dist = dr*dr + dg*dg + db*db;
+          if (dist < bd) { bd = dist; best = ch; }
+        }
+        row.push(best);
+      }
+      grid.push(row);
+    }
+    undoStack = [];
+    repaint();
+    status.textContent = img.width + " x " + img.height + "  (" + f.name + ")";
+  };
+  img.src = URL.createObjectURL(f);
+};
+
+document.getElementById("copy").onclick = () => {
+  out.select();
+  navigator.clipboard ? navigator.clipboard.writeText(out.value) : document.execCommand("copy");
+  status.textContent = "copied";
+};
+
+document.getElementById("bg").onclick = ev => {
+  snowBg = !snowBg;
+  ev.target.textContent = "Background: " + (snowBg ? "snow" : "checker");
+  repaint();
+};
+
+repaint();
+</script>
+</body>
+</html>
