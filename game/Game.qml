@@ -169,7 +169,11 @@ FocusScope {
                       + (sy < 0 ? -1 : 0), inset, 1)
       }
     }
-    // Hard corners everywhere except the classic DMG round, bottom right.
+    // Hard corners with a single-pixel chamfer, except the classic DMG
+    // round at the bottom right.
+    ctx.clearRect(0, 0, 1, 1)
+    ctx.clearRect(F - 1, 0, 1, 1)
+    ctx.clearRect(0, F - 1, 1, 1)
     roundCorner(F, F, 12, -1, -1)
 
     // Accent stripes across the top bezel, dot-matrix style — exactly as
