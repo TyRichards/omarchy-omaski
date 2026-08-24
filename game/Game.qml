@@ -341,7 +341,7 @@ FocusScope {
       if (s.airborne && s.height > 0.3) {
         // A shadow on the snow, to judge the landing by.
         ctx.fillStyle = root.shadow
-        ctx.fillRect(Math.round(root.screen / 2 - 3), root.skierY - 1, 6, 2)
+        ctx.fillRect(Math.round(root.screen / 2 - 2), root.skierY - 1, 3, 1)
       }
       var pose = Engine.skierSprite(s)
       root.mirrored(ctx, pose[0], pose[1], s.x, s.y,

@@ -236,7 +236,7 @@ function playTick(s, ev) {
   check('wrap is periodic', Math.abs(Engine.wrap(Engine.WORLD_LIMIT * 2 + 5) - 5) < 1e-9);
   check('wrap is symmetric', Math.abs(Engine.wrap(-Engine.WORLD_LIMIT - 1) - (Engine.WORLD_LIMIT - 1)) < 1e-9);
   check('world limit is 2048', Engine.WORLD_LIMIT === 2048);
-  check('8 pixels per metre', Engine.PIXELS_PER_METRE === 8);
+  check('4 pixels per metre (half-scale test)', Engine.PIXELS_PER_METRE === 4);
 }
 
 // --- 8. field is deterministic and stable ---------------------------------

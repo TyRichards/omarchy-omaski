@@ -30,7 +30,7 @@
 // The engine runs in metres and seconds and never touches the screen; the
 // view decides how many pixels a metre gets (8, in the chunky rebuild).
 
-var PIXELS_PER_METRE = 8;
+var PIXELS_PER_METRE = 4;   // half-scale test: was 8
 var WORLD_LIMIT = 2048;          // metres, in each direction
 var TICK_HZ = 30;
 

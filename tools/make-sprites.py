@@ -1739,6 +1739,44 @@ k..k
 # ---------------------------------------------------------------------------
 
 
+def half(rows):
+    """Smash a sprite to half size: each 2x2 block becomes one pixel.
+
+    Any inked pixel in the block survives (so 1px features like poles and
+    ski tips don't vanish); the block's most frequent ink wins, earliest
+    pixel breaking ties. Odd dimensions round up.
+    """
+    sh, sw = len(rows), len(rows[0])
+    dh, dw = (sh + 1) // 2, (sw + 1) // 2
+    out = []
+    for y in range(dh):
+        row = []
+        for x in range(dw):
+            counts = {}
+            order = []
+            for dy in range(2):
+                for dx in range(2):
+                    sy, sx = y * 2 + dy, x * 2 + dx
+                    if sy < sh and sx < sw and rows[sy][sx] not in (".", " "):
+                        c = rows[sy][sx]
+                        counts[c] = counts.get(c, 0) + 1
+                        if c not in order:
+                            order.append(c)
+            if not counts:
+                row.append(".")
+            else:
+                best = max(order, key=lambda c: counts[c])
+                row.append(best)
+        out.append(row)
+    return out
+
+
+# The half-scale TEST: every world sprite is smashed to half size and the
+# engine runs at 4 px/metre, so twice the terrain fits on the 128 screen.
+# The logo and all runtime text stay full size. Flip to False to restore.
+HALF_SCALE = True
+FULL_SIZE_IDS = {53}    # the logo
+
 def load_override(sid):
     """Hand-edited pixels from the sprite editor win over the builder.
 
@@ -1802,6 +1840,8 @@ def build(outdir):
             if len(rows[0]) != w or len(rows) != h:
                 raise SystemExit("sprite %d is %dx%d, expected %dx%d"
                                  % (sid, len(rows[0]), len(rows), w, h))
+        if HALF_SCALE and sid not in FULL_SIZE_IDS:
+            rows = half(rows)
         actual_sizes[sid] = (len(rows[0]), len(rows))
         write_png(os.path.join(outdir, "%03d.png" % sid), rows)
         name = BUILDERS[sid].__name__.lstrip("_")
