@@ -42,8 +42,8 @@ FocusScope {
   // with the top-left corner pinned to the hardware pixel grid.
   readonly property real itemScale: root.pxScale / root.dpr
 
-  // The skier rides high on the screen for extra reaction time.
-  readonly property int skierY: 34
+  // The skier sits about a third of the way down, as in the classic.
+  readonly property int skierY: 44
 
   property var sim: Engine.createState()
   property var events: []
@@ -169,15 +169,14 @@ FocusScope {
                       + (sy < 0 ? -1 : 0), inset, 1)
       }
     }
-    roundCorner(0, 0, 3, 1, 1)              // top left
-    roundCorner(F, 0, 3, -1, 1)             // top right
-    roundCorner(0, F, 3, 1, -1)             // bottom left
-    roundCorner(F, F, 12, -1, -1)           // bottom right, DMG style
+    // Hard corners everywhere except the classic DMG round, bottom right.
+    roundCorner(F, F, 12, -1, -1)
 
-    // Accent stripes across the top bezel, dot-matrix style.
+    // Accent stripes across the top bezel, dot-matrix style — exactly as
+    // wide as the dark lip box holding the screen.
     ctx.fillStyle = "#5F574F"
-    ctx.fillRect(5, 3, F - 10, 1)
-    ctx.fillRect(5, 5, F - 10, 1)
+    ctx.fillRect(root.bezel - 1, 3, root.screen + 2, 1)
+    ctx.fillRect(root.bezel - 1, 5, root.screen + 2, 1)
 
     // Inner lip: a 1px dark ring hugging the screen.
     var b = root.bezel

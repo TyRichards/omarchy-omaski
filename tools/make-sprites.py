@@ -1437,9 +1437,9 @@ def _logo():
     # A vaporwave sun rises in the valley between the peaks: yellow crown,
     # orange belly, red base, with the classic scanline gaps low down.
     synth_sun(dst, 69, 9, 8)
-    mountain(dst, 53, 0, 30, cap=15)
+    mountain(dst, 53, 2, 30, cap=15)
     # The second peak's 45-degree base ends flush with the I (x = 94).
-    mountain(dst, 79, 8, 15, cap=9)
+    mountain(dst, 79, 10, 15, cap=9)
     word = "OMASKI"
     wx = (120 - text_width(word, 3)) // 2
     wy = 25
