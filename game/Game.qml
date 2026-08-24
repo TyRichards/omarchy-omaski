@@ -191,7 +191,7 @@ FocusScope {
 
     // The make on the bottom bezel, puny case, flush with the left edge
     // of the game box.
-    Font.draw(ctx, root.bezel - 1, root.bezel + root.screen + 3,
+    Font.draw(ctx, root.bezel + 1, root.bezel + root.screen + 3,
               "omarchy", 1)
   }
 
