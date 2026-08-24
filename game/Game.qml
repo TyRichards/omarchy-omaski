@@ -179,8 +179,8 @@ FocusScope {
     // Accent stripes across the top bezel, dot-matrix style — exactly as
     // wide as the dark lip box holding the screen.
     ctx.fillStyle = "#5F574F"
-    ctx.fillRect(root.bezel - 1, 3, root.screen + 2, 1)
-    ctx.fillRect(root.bezel - 1, 5, root.screen + 2, 1)
+    ctx.fillRect(root.bezel - 1, 4, root.screen + 2, 1)
+    ctx.fillRect(root.bezel - 1, 6, root.screen + 2, 1)
 
     // Inner lip: a 1px dark ring hugging the screen.
     var b = root.bezel
