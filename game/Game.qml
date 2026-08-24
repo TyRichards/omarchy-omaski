@@ -377,7 +377,7 @@ FocusScope {
     if (root.hudVisible) root.drawHud(ctx)
 
     if (s.paused)
-      panel(ctx, root.screen / 2, 56, ["PAUSED - ⬇ TO SKI"])
+      panel(ctx, root.screen / 2, 56, ["PAUSED ⬇ TO SKI"])
 
     if (s.over)
       panel(ctx, root.screen / 2, 92,
