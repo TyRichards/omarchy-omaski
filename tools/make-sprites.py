@@ -26,8 +26,8 @@ import struct
 import zlib
 
 # ---------------------------------------------------------------------------
-# Palette: the 16 PICO-8 colours, one character each — plus "G", the official
-# Omarchy green (#9ECE6A from omarchy.org), used only in the title logo.
+# Palette: the 16 PICO-8 colours, one character each. Nothing else — the
+# game follows strict PICO-8 limitations.
 # ---------------------------------------------------------------------------
 # '.' (and ' ') are transparent.
 
@@ -48,7 +48,6 @@ PALETTE = {
     "l": (0x83, 0x76, 0x9C, 255),   # 13 indigo
     "m": (0xFF, 0x77, 0xA8, 255),   # 14 pink
     "f": (0xFF, 0xCC, 0xAA, 255),   # 15 peach
-    "G": (0x9E, 0xCE, 0x6A, 255),   # Omarchy green
 }
 
 # Sprite canvas sizes, kept identical to game/Sprites.js. At 8 px/metre these
@@ -1458,7 +1457,7 @@ def _logo():
         for oy in range(-2, 3):
             if ox or oy:
                 draw_text(dst, wx + ox, wy + oy, word, "k", 3)
-    draw_text(dst, wx, wy, word, "G", 3)
+    draw_text(dst, wx, wy, word, "g", 3)
     # A shallow notch down from the top edge of the big M, leaving its
     # middle vertex bridging the towers just below — so it reads as an M.
     mx = wx + 4 * 3
@@ -1466,7 +1465,7 @@ def _logo():
     # Thicken the R where its bowl meets the leg, but bite a black notch
     # into its far right edge there — that notch is what says R, not A.
     rx = wx + 3 * 4 * 3
-    fill_rect(dst, rx + 6, wy + 6, rx + 8, wy + 9, "G")
+    fill_rect(dst, rx + 6, wy + 6, rx + 8, wy + 9, "g")
     fill_rect(dst, rx + 8, wy + 6, rx + 9, wy + 9, "k")
     # One mountain pixel leaks through the outline at the S's top-left
     # corner; ink it over.

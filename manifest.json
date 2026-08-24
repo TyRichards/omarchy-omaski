@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "io.github.tyrichards.omarski",
   "name": "Omarski",
-  "version": "4.7.10",
+  "version": "5.0.0",
   "author": "Ty Richards",
   "license": "MIT",
-  "description": "A faithful SkiFree-style skiing game for Omarchy in a chunky PICO-8-flavoured style, with all-original artwork. Opens as a square 1:1 window.",
+  "description": "A faithful SkiFree-style skiing game for Omarchy on an authentic PICO-8 screen: a fixed 128x128 pixel grid and the 16 PICO-8 colours, integer-scaled 1:1 in a square window. All-original artwork.",
   "kinds": [
     "bar-widget"
   ],
@@ -17,7 +17,11 @@
     "displayName": "Omarski",
     "description": "Ski the endless slope, hit the ramps, and outrun the Abominable Snow Monster",
     "category": "Fun",
-    "aliases": ["omarski", "skifree", "ski"],
+    "aliases": [
+      "omarski",
+      "skifree",
+      "ski"
+    ],
     "allowMultiple": false,
     "defaultSection": "left"
   }

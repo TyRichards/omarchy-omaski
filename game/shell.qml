@@ -34,7 +34,9 @@ FloatingWindow {
 
   title: "Omarski"
   visible: true
-  color: "#FFF1E8"   // PICO-8 white, the same snow the canvas paints
+  // Black, so any window shape beyond the integer-scaled 128x128 screen
+  // shows as PICO-8 letterbox bars.
+  color: "#000000"
 
   implicitWidth: side
   implicitHeight: side
