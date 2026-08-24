@@ -993,19 +993,13 @@ ssssssssssss
 
 @sprite(52)
 def _ramp():
-    # A rainbow arch lying across the slope: concentric colour bands around
-    # a white face, red outermost.
+    # A flat rainbow lying across the slope: five full-width stripes, the
+    # same five colours in the same order (red on top), over a white face.
     dst = canvas(16, 6)
-    bands = ["r", "o", "y", "g", "b"]
+    bands = ["r", "o", "y", "g", "b", "w"]
     for y in range(6):
         for x in range(16):
-            dx = x - 7.5
-            dy = (5 - y) * 1.55
-            dist = (dx * dx + dy * dy) ** 0.5
-            if dist > 8.4:
-                continue
-            ring = int((8.4 - dist) / 1.05)
-            dst[y][x] = bands[ring] if ring < len(bands) else "w"
+            dst[y][x] = bands[y]
     return dst
 
 

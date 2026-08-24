@@ -377,6 +377,19 @@ function playTick(s, ev) {
         `dist=${s.distance.toFixed(0)}m eaten=${s.eaten}`);
   check('numbers stay finite',
         Number.isFinite(s.x) && Number.isFinite(s.y) && Number.isFinite(s.style));
+
+  // Fully sideways, another push the same way scoots across the slope.
+  const sc = Engine.createState();
+  Engine.setHeading(sc, 3);
+  const beforeX = sc.x;
+  Engine.turn(sc, 1);
+  check('planted skier scoots right on another right',
+        sc.x > beforeX && sc.heading === 3, `x ${beforeX} -> ${sc.x}`);
+  Engine.setHeading(sc, -3);
+  Engine.turn(sc, -1);
+  Engine.turn(sc, -1);
+  check('and scoots left on repeated lefts', sc.x < beforeX,
+        `x -> ${sc.x}`);
 }
 
 console.log(failures === 0 ? '\nAll checks passed.' : `\n${failures} check(s) failed.`);

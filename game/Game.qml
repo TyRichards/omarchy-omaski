@@ -296,30 +296,30 @@ FocusScope {
             ["YOU HAVE BEEN EATEN.", "F2 TO RESTART"])
   }
 
-  // The status box, top right. The font is strictly monospace, so the
-  // ticking digits hold perfectly still.
+  // Elapsed time squeezed as tight as it goes: M:SS, hours only if earned.
+  function shortTime(t) {
+    var total = Math.floor(t)
+    var m = Math.floor(total / 60) % 60
+    var sec = total % 60
+    var hr = Math.floor(total / 3600)
+    return (hr > 0 ? hr + ":" + (m < 10 ? "0" : "") : "") + m + ":"
+           + (sec < 10 ? "0" : "") + sec
+  }
+
+  // The score readout, top right: four bare lines floating over the snow,
+  // no box. The font is strictly monospace, so ticking digits hold still.
   function drawHud(ctx) {
     var s = root.sim
     var rows = [
-      ["TIME", Engine.formatTime(s.elapsed)],
-      ["DIST", Math.floor(s.distance) + "M"],
-      ["SPEED", Math.floor(s.speed) + "M/S"],
-      ["STYLE", String(Math.floor(s.style))]
+      shortTime(s.elapsed),
+      Math.floor(s.distance) + "M",
+      Math.round(s.speed * 2.23694) + "MPH",
+      "RAD: " + Math.floor(s.style)
     ]
-    var labelW = Font.width("SPEED", 1)
-    var valueW = Font.width("0:00:00.00", 1)
-    var w = labelW + 4 + valueW + 6
-    var h = rows.length * 7 + 4
-    var x = root.screen - w - 2
-    ctx.fillStyle = root.ink
-    ctx.fillRect(x - 1, 1, w + 2, h + 2)
-    ctx.fillStyle = root.snow
-    ctx.fillRect(x, 2, w, h)
     ctx.fillStyle = root.ink
     for (var j = 0; j < rows.length; j++) {
-      Font.draw(ctx, x + 3, 4 + j * 7, rows[j][0], 1)
-      Font.draw(ctx, x + w - 3 - Font.width(rows[j][1], 1),
-                4 + j * 7, rows[j][1], 1)
+      Font.draw(ctx, root.screen - 2 - Font.width(rows[j], 1),
+                2 + j * 7, rows[j], 1)
     }
   }
 
@@ -335,11 +335,11 @@ FocusScope {
     ctx.fillStyle = "#29ADFF"   // the skier's jacket blue
     text(ctx, cx, 52, "SKI FREE. AVOID THE YETI.")
     ctx.fillStyle = root.inkSoft
-    text(ctx, cx, 64, "VERSION 5.0")
+    text(ctx, cx, 64, "VERSION 5.1")
     ctx.fillStyle = root.ink
     text(ctx, cx, 75, "USE NUMPAD (0-9)")
     text(ctx, cx, 82, "FOR BETTER CONTROL")
-    text(ctx, cx, 92, "Ⓞ = PAUSE   F = FAST")
+    text(ctx, cx, 92, "Ⓞ = PAUSE  F = FAST ON/OFF")
     text(ctx, cx, 99, "F2 = RESTART")
     text(ctx, cx, 113, "PRESS ❎ TO SKI")
   }
@@ -405,9 +405,10 @@ FocusScope {
     case Qt.Key_PageUp:
       s.climbing = 1; break
 
-    // --- fast mode ------------------------------------------------------
+    // --- fast mode: F is a toggle, press to switch on, again to switch off
     case Qt.Key_F:
-      s.fast = true; break
+      if (!event.isAutoRepeat) s.fast = !s.fast
+      break
 
     // --- meta -----------------------------------------------------------
     case Qt.Key_F2:
@@ -436,7 +437,6 @@ FocusScope {
     if (event.isAutoRepeat) return
     var s = root.sim
     switch (event.key) {
-    case Qt.Key_F:
     case Qt.Key_Down:
     case Qt.Key_S:
       s.fast = false; break

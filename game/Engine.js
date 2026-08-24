@@ -38,6 +38,9 @@ var TICK_HZ = 30;
 
 var MAX_HEADING = 3;
 
+// Metres moved per extra push past full sideways: the planted-skis scoot.
+var SCOOT_STEP = 0.5;
+
 // Target scalar speed in m/s per |heading|. Straight down is fastest, and
 // skis fully sideways means a stop, exactly like the classic.
 var SPEED_BY_HEADING = [15.0, 13.7, 12.0, 0.0];
@@ -712,8 +715,14 @@ function turn(state, delta) {
     if (state.flipStage % Sprites.FLIP_FRAMES.length === 0) state.style += 150;
     return;
   }
-  state.heading = Math.max(-MAX_HEADING,
-                           Math.min(MAX_HEADING, state.heading + delta));
+  var next = state.heading + delta;
+  if (next > MAX_HEADING || next < -MAX_HEADING) {
+    // Already planted fully sideways: pushing the same way again (tap or
+    // hold — key auto-repeat lands here) scoots the skier across the slope.
+    state.x = wrap(state.x + (delta > 0 ? SCOOT_STEP : -SCOOT_STEP));
+    return;
+  }
+  state.heading = next;
 }
 
 function setHeading(state, heading) {
