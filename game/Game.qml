@@ -75,26 +75,34 @@ FocusScope {
     root.forceActiveFocus()
   }
 
+  // Bumped on every sprite reload: Qt caches images by URL, so the query
+  // string forces fresh pixels off the disk instead of stale cache hits.
+  property int artEpoch: 0
+
   function spriteUrl(id) {
     return root.spriteDir + "/" + (id < 10 ? "00" : "0") + id + ".png"
+           + "?v=" + root.artEpoch
   }
 
   // Hot reload: the sprite tools touch .stamp after rewriting PNGs, and the
   // open window swaps the art in place — no respawn, geometry untouched.
   function reloadSprites() {
     var ids = Object.keys(Sprites.SIZES)
-    for (var i = 0; i < ids.length; i++) {
-      var url = root.spriteUrl(Number(ids[i]))
-      canvas.unloadImage(url)
-      canvas.loadImage(url)
-    }
+    for (var i = 0; i < ids.length; i++)
+      canvas.unloadImage(root.spriteUrl(Number(ids[i])))
+    root.artEpoch++
+    for (var j = 0; j < ids.length; j++)
+      canvas.loadImage(root.spriteUrl(Number(ids[j])))
+    console.log("omaski: sprites reloaded (epoch " + root.artEpoch + ")")
     root.repaint()
   }
 
   FileView {
+    id: stampView
     path: root.spriteDir.replace(/^file:\/\//, "") + "/.stamp"
     watchChanges: true
-    onFileChanged: root.reloadSprites()
+    onFileChanged: { this.reload(); root.reloadSprites() }
+    onLoaded: console.log("omaski: watching " + path)
   }
 
   // The paint code skips sprites that are not loaded, which keeps startup
