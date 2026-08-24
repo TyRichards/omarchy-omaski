@@ -29,7 +29,6 @@ BarWidget {
     bar: root.bar
     // nf-md-ski (U+F1304), the downhill skier in Omarchy's JetBrainsMono Nerd Font.
     text: "󱌄"
-    tooltipText: "Omaski"
     onPressed: function (mouseButton) {
       if (mouseButton === Qt.LeftButton) root.launchGame()
     }
