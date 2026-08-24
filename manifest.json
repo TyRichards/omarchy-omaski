@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.tyrichards.omaski",
   "name": "Omaski",
-  "version": "5.3.0",
+  "version": "5.3.1",
   "author": "Ty Richards",
   "license": "MIT",
   "description": "A faithful SkiFree-style skiing game for Omarchy on an authentic PICO-8 screen: a fixed 128x128 pixel grid and the 16 PICO-8 colours, integer-scaled 1:1 in a square window. All-original artwork.",

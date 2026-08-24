@@ -355,15 +355,14 @@ FocusScope {
     var logoUrl = root.spriteUrl(Sprites.LOGO)
     if (canvas.isImageLoaded(logoUrl)) {
       ctx.drawImage(logoUrl,
-                    Math.round(cx - Sprites.width(Sprites.LOGO) / 2), 3)
+                    Math.round(cx - Sprites.width(Sprites.LOGO) / 2), 9)
     }
-    // Tagline and start prompt, dead centre of the page.
+    // Tagline and start prompt, balanced between logo and instructions.
     ctx.fillStyle = "#FF004D"   // PICO-8 red
-    text(ctx, cx, 58, "SKI FREE. AVOID THE YETI.")
+    text(ctx, cx, 64, "SKI FREE. AVOID THE YETI.")
     ctx.fillStyle = root.ink
-    text(ctx, cx, 65, "PRESS ⬇ TO SKI")
-    // The key hints, dark grey, low on the page.
-    ctx.fillStyle = root.inkSoft
+    text(ctx, cx, 71, "PRESS ⬇ TO SKI")
+    // The key hints, low on the page.
     text(ctx, cx, 88, "USE NUMPAD (0-9)")
     text(ctx, cx, 94, "FOR BETTER CONTROL")
     text(ctx, cx, 103, "F = FAST ON/OFF")

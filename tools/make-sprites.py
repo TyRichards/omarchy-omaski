@@ -1392,7 +1392,7 @@ def synth_sun(dst, cx, cy, r):
         if dy in (2, 5, 7):        # scanline gaps toward the bottom
             continue
         half = int((r * r - dy * dy) ** 0.5)
-        c = "y" if dy < -2 else ("o" if dy <= 2 else "r")
+        c = "r"
         for x in range(cx - half, cx + half + 1):
             if 0 <= x < len(dst[0]) and 0 <= y < len(dst):
                 dst[y][x] = c
@@ -1436,10 +1436,10 @@ def _logo():
     dst = canvas(120, 44)
     # A vaporwave sun rises in the valley between the peaks: yellow crown,
     # orange belly, red base, with the classic scanline gaps low down.
-    synth_sun(dst, 59, 9, 8)
-    mountain(dst, 46, 0, 30, cap=15)
+    synth_sun(dst, 62, 9, 8)
+    mountain(dst, 50, 0, 30, cap=15)
     # The second peak's 45-degree base ends flush with the I (x = 94).
-    mountain(dst, 72, 8, 22, cap=11)
+    mountain(dst, 76, 8, 18, cap=11)
     word = "OMASKI"
     wx = (120 - text_width(word, 3)) // 2
     wy = 25
