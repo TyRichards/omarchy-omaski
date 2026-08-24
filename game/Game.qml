@@ -361,11 +361,11 @@ FocusScope {
           var bx = sx(s.x) - (Sprites.width(Sprites.CRASH_OUCH) >> 1)
           var by = sy(s.y) - Sprites.height(s.crashSprite)
                  - Sprites.height(Sprites.CRASH_OUCH) - 2
-          ctx.drawImage(burstUrl, bx, by + 1)
+          ctx.drawImage(burstUrl, bx, by + 3)
           ctx.fillStyle = root.ink
           // Lowercase renders the puny font, so the word fits the burst.
           text(ctx, sx(s.x),
-               by + Math.round(Sprites.height(Sprites.CRASH_OUCH) / 2) - 2,
+               by + Math.round(Sprites.height(Sprites.CRASH_OUCH) / 2) - 1,
                s.crashWord.toLowerCase())
         }
       }
