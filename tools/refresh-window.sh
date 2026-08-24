@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 #
-# Dev helper: restart a running Omarski window in place so it picks up
-# freshly regenerated sprites and game code. No-op when the game is not
-# open. The new window is spawned onto the workspace the old one occupied
-# with the "silent" rule, so focus never moves to it.
+# Dev helper: make a running Omarski window pick up fresh game code.
+#
+# The game runs with quickshell's file watcher enabled, so QML/JS edits
+# live-reload inside the existing window on their own — same window, same
+# tile, no respawn. This script nudges an explicit reload over IPC for
+# changes the watcher cannot see (or after a `git checkout`). Legacy
+# instances without the IPC handler get one final kill-and-respawn.
+#
+# No-op when the game is not open.
 
 set -euo pipefail
 
@@ -18,12 +23,26 @@ if [[ -z $client ]]; then
 fi
 
 pid=$(jq -r '.pid' <<<"$client")
+
+# Address the IPC call to the exact instance behind the open window (the
+# path can be ambiguous while offscreen test instances are running).
+instance=$(quickshell list --all 2>/dev/null | awk -v pid="$pid" '
+  /^Instance / { id = $2; sub(":", "", id) }
+  /Process ID:/ && $3 == pid { print id }')
+
+if [[ -n $instance ]] &&
+   quickshell ipc -i "$instance" call dev reload >/dev/null 2>&1; then
+  echo "live-reloaded $app_id in place"
+  exit 0
+fi
+
+# --- legacy instance without the IPC handler: respawn once to migrate -----
+
 ws=$(jq -r '.workspace.id' <<<"$client")
 x=$(jq -r '.at[0]' <<<"$client")
 y=$(jq -r '.at[1]' <<<"$client")
 side=$(jq -r '.size[0]' <<<"$client")
 
-# Only kill the pid if it is still the quickshell game instance.
 if grep -qz "QS_APP_ID=$app_id" "/proc/$pid/environ" 2>/dev/null; then
   kill "$pid" 2>/dev/null || true
 fi
@@ -34,7 +53,7 @@ for _ in $(seq 1 50); do
   sleep 0.1
 done
 
-command="env QS_APP_ID=$app_id QS_DISABLE_FILE_WATCHER=1"
+command="env QS_APP_ID=$app_id"
 command+=" OMARSKI_SIDE=$side OMARSKI_SPRITES=$plugin_dir/assets/sprites"
 if [[ -n ${OMARSKI_DEBUG_START:-} ]]; then
   command+=" OMARSKI_DEBUG_START=$OMARSKI_DEBUG_START"
@@ -47,4 +66,4 @@ rules+=", workspace = \"$ws silent\""
 rules+=", tag = \"-default-opacity\", opacity = 1.0, opaque = true }"
 
 hyprctl eval "hl.exec_cmd($command_json, $rules)" >/dev/null
-echo "refreshed $app_id on workspace $ws"
+echo "respawned $app_id with live reload enabled (one-time migration)"

@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Window
 import Quickshell.Io
 import "Engine.js" as Engine
 import "Sprites.js" as Sprites
@@ -21,10 +22,20 @@ FocusScope {
   // The one and only screen.
   readonly property int screen: 128
 
-  // Whole-number zoom from the 128x128 screen to the window; the remainder
+  // The zoom is locked to a whole number of PHYSICAL pixels per game
+  // pixel. On a fractionally scaled monitor (Hyprland scale 1.5, say),
+  // an integer zoom in logical pixels can still land on half a hardware
+  // pixel — 5 logical x 1.5 = 7.5 physical — and the compositor has to
+  // shred the grid to draw it. Working in physical pixels keeps every
+  // game pixel a perfect square at every window size; the remainder
   // becomes black bars, never a stretched pixel.
+  readonly property real dpr: Screen.devicePixelRatio || 1
   readonly property int pxScale: Math.max(1,
-    Math.floor(Math.min(width, height) / root.screen))
+    Math.floor(Math.min(width, height) * dpr / root.screen))
+
+  // The item-space scale and offsets that realise that physical zoom,
+  // with the top-left corner pinned to the hardware pixel grid.
+  readonly property real itemScale: root.pxScale / root.dpr
 
   // The skier sits about a third of the way down, as in the classic.
   readonly property int skierY: 44
@@ -123,10 +134,16 @@ FocusScope {
     id: canvas
     width: root.screen
     height: root.screen
-    x: Math.round((root.width - root.screen * root.pxScale) / 2)
-    y: Math.round((root.height - root.screen * root.pxScale) / 2)
+    // The backing store is exactly 128x128 texels — never DPR-multiplied —
+    // so the game truly rasterises on the 128 grid and only the final
+    // texture blit scales it up.
+    canvasSize: Qt.size(root.screen, root.screen)
+    x: Math.floor((root.width * root.dpr - root.screen * root.pxScale) / 2)
+       / root.dpr
+    y: Math.floor((root.height * root.dpr - root.screen * root.pxScale) / 2)
+       / root.dpr
     transformOrigin: Item.TopLeft
-    scale: root.pxScale
+    scale: root.itemScale
     smooth: false          // nearest-neighbour upscale: big square pixels
     antialiasing: false
     onPaint: root.draw()
@@ -456,8 +473,8 @@ FocusScope {
     hoverEnabled: true
 
     // Window pixels -> 128-grid pixels.
-    function gridX(wx) { return (wx - canvas.x) / root.pxScale }
-    function gridY(wy) { return (wy - canvas.y) / root.pxScale }
+    function gridX(wx) { return (wx - canvas.x) / root.itemScale }
+    function gridY(wy) { return (wy - canvas.y) / root.itemScale }
 
     // Where the pointer last actually steered from. A resting pointer
     // jitters by a pixel or two, and that must never override a heading
@@ -469,7 +486,7 @@ FocusScope {
       if (!root.started) return
       if (steerX < 0) { steerX = mouse.x; steerY = mouse.y; return }
       if (Math.abs(mouse.x - steerX) + Math.abs(mouse.y - steerY)
-          < 4 * root.pxScale) return
+          < 4 * root.itemScale) return
       steerX = mouse.x
       steerY = mouse.y
       var dx = gridX(mouse.x) - root.screen / 2

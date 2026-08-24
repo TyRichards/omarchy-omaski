@@ -94,7 +94,10 @@ fi
 # Note: quickshell's --no-duplicate is deliberately not used. It keys off a
 # hash of the config path, so a stale instance id from an earlier run makes it
 # refuse to start at all. The hyprctl check above already prevents duplicates.
-command="env QS_APP_ID=$app_id QS_DISABLE_FILE_WATCHER=1"
+#
+# The file watcher stays ON: quickshell live-reloads the QML in place when
+# game files change, reusing the same window — no respawn, no re-tiling.
+command="env QS_APP_ID=$app_id"
 command+=" OMARSKI_SIDE=$side OMARSKI_SPRITES=$sprite_dir"
 # Debug only: OMARSKI_DEBUG_START=<metres> ./launch.sh skips the title card
 # and starts that far down the hill. See game/Game.qml.

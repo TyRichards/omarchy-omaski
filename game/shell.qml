@@ -15,6 +15,24 @@ import Quickshell.Io
 FloatingWindow {
   id: window
 
+  // Live reload: quickshell watches the game's QML/JS files (on by
+  // default) and reloads the config in place when they change, reusing
+  // this window — code edits land in the open pane, no respawn, no
+  // re-tiling. OMARSKI_NO_WATCH=1 opts out for throwaway test runs.
+  Component.onCompleted:
+    Quickshell.watchFiles = Quickshell.env("OMARSKI_NO_WATCH") !== "1"
+
+  // Manual nudge for changes the file watcher cannot see (sprite-editor
+  // tooling, git checkout of identical-mtime trees):
+  //   quickshell ipc -p <plugin>/game call dev reload
+  IpcHandler {
+    target: "dev"
+    function reload(): string {
+      Quickshell.reload(false)
+      return "reloading"
+    }
+  }
+
   // Preferred edge length in logical pixels, from the launcher.
   readonly property int side: {
     var value = parseInt(Quickshell.env("OMARSKI_SIDE") || "", 10)
