@@ -3,7 +3,7 @@
 .import "Sprites.js" as Sprites
 
 // ---------------------------------------------------------------------------
-// Omarski engine, fourth cut
+// Omaski engine, fourth cut
 // ---------------------------------------------------------------------------
 //
 // A from-scratch simulation of the rules of the classic 1991 skiing game,

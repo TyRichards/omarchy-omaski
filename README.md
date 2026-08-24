@@ -1,4 +1,4 @@
-# Omarski
+# Omaski
 
 A skiing game for Omarchy in the spirit of the 1991 classic SkiFree, rebuilt
 to run natively on Hyprland — with **all-original artwork** in a chunky,
@@ -47,14 +47,14 @@ python3 tools/make-sprites.py     # regenerate assets/sprites/
 
 Nothing is extracted from, traced over, or downloaded out of anyone else's
 game. The sprites are MIT-licensed with the rest of the plugin, which is what
-lets Omarski ship complete on the plugin marketplace with no first-run
+lets Omaski ship complete on the plugin marketplace with no first-run
 downloads.
 
 ## Faithfulness
 
 The simulation is a from-scratch implementation of the classic's rules:
 
-| Classic behaviour | In Omarski |
+| Classic behaviour | In Omaski |
 |---|---|
 | World wraps at ±2048 m in every direction | `WORLD_LIMIT = 2048`, wrapped on both axes |
 | Momentum | You push off from a standstill, build to 15 m/s, and a crash costs all of it |
@@ -118,7 +118,7 @@ Two details worth knowing, both learned the hard way:
   ever gets tiled.
 * Omarchy tags every window `default-opacity` and then applies `0.985 0.96` to
   whatever still carries the tag, so `opaque = true` alone is not enough — the
-  later opacity rule wins and the snow goes muddy. Omarski drops the tag as
+  later opacity rule wins and the snow goes muddy. Omaski drops the tag as
   well, which is the documented opt-out, and the snowfield renders solid.
 
 ## Tests
@@ -142,17 +142,17 @@ kilometres by hand:
 
 ```bash
 # start already at 1990 m, so the monster turns up almost immediately
-OMARSKI_DEBUG_START=1990 ./launch.sh
+OMASKI_DEBUG_START=1990 ./launch.sh
 
 # the same, without the launcher's window placement
-OMARSKI_DEBUG_START=1990 quickshell -p ./game
+OMASKI_DEBUG_START=1990 quickshell -p ./game
 ```
 
 ## Install
 
 ```bash
 omarchy plugin validate .
-omarchy plugin enable io.github.tyrichards.omarski
+omarchy plugin enable io.github.tyrichards.omaski
 ```
 
 Saving any file under `~/.config/omarchy/plugins/` hot-reloads the plugin.
@@ -161,12 +161,12 @@ Besides the bar icon, the game can be opened (or focused, if it is already
 running) from a script or keybinding:
 
 ```bash
-omarchy shell omarski launch
+omarchy shell omaski launch
 ```
 
 ## Credit
 
-Omarski is a from-scratch homage to **SkiFree**, written by Chris Pirih in
+Omaski is a from-scratch homage to **SkiFree**, written by Chris Pirih in
 1991\. He still hosts the original, for free, at <https://ski.ihoc.net/> — go
 play it, read the story of how it came to be, and buy the man a T-shirt.
 

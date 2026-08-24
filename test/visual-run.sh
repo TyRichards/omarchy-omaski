@@ -4,11 +4,11 @@
 # entry, gates, pause, HUD toggle, and the yeti under fast mode. Every
 # synthetic keypress is guarded on the game actually holding focus, so a
 # focus steal aborts the run instead of typing into someone else's window.
-# Screenshots land in ${TMPDIR:-/tmp}/omarski-shots/.
+# Screenshots land in ${TMPDIR:-/tmp}/omaski-shots/.
 # Run it on an otherwise empty workspace with the desktop free.
 set -u
-S="${TMPDIR:-/tmp}/omarski-shots"; mkdir -p "$S"
-ID=io.github.tyrichards.omarski
+S="${TMPDIR:-/tmp}/omaski-shots"; mkdir -p "$S"
+ID=io.github.tyrichards.omaski
 
 guard() {
   local cls
@@ -28,7 +28,7 @@ shot() {
 
 key() { guard "$2"; wtype -k "$1"; }
 
-cd /home/trr/.config/omarchy/plugins/io.github.tyrichards.omarski
+cd /home/trr/.config/omarchy/plugins/io.github.tyrichards.omaski
 ./launch.sh   # focuses the existing instance
 sleep 3
 guard launch

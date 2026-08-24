@@ -7,7 +7,7 @@ import qs.Ui
 // One bar icon that opens the game, or focuses it if it is already running.
 BarWidget {
   id: root
-  moduleName: "io.github.tyrichards.omarski"
+  moduleName: "io.github.tyrichards.omaski"
 
   readonly property string launcherPath: {
     var value = Qt.resolvedUrl("launch.sh").toString()
@@ -29,16 +29,16 @@ BarWidget {
     bar: root.bar
     // nf-md-ski (U+F1304), the downhill skier in Omarchy's JetBrainsMono Nerd Font.
     text: "󱌄"
-    tooltipText: "Omarski"
+    tooltipText: "Omaski"
     onPressed: function (mouseButton) {
       if (mouseButton === Qt.LeftButton) root.launchGame()
     }
   }
 
-  // `omarchy shell ipc call omarski launch` opens or focuses the game, so a
+  // `omarchy shell ipc call omaski launch` opens or focuses the game, so a
   // keybinding can do what the bar icon does.
   IpcHandler {
-    target: "omarski"
+    target: "omaski"
 
     function launch(): void { root.launchGame() }
   }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Local server for the Omarski sprite editor.
+"""Local server for the Omaski sprite editor.
 
 Serves sprite-editor.html plus a tiny API:
   GET  /api/ping     - liveness check for the launcher

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Dev helper: make a running Omarski window pick up fresh game code.
+# Dev helper: make a running Omaski window pick up fresh game code.
 #
 # The game runs with quickshell's file watcher enabled, so QML/JS edits
 # live-reload inside the existing window on their own — same window, same
@@ -13,7 +13,7 @@
 set -euo pipefail
 
 plugin_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
-app_id=io.github.tyrichards.omarski
+app_id=io.github.tyrichards.omaski
 
 client=$(hyprctl clients -j 2>/dev/null |
   jq -c --arg id "$app_id" 'map(select(.class == $id))[0] // empty')
@@ -54,9 +54,9 @@ for _ in $(seq 1 50); do
 done
 
 command="env QS_APP_ID=$app_id"
-command+=" OMARSKI_SIDE=$side OMARSKI_SPRITES=$plugin_dir/assets/sprites"
-if [[ -n ${OMARSKI_DEBUG_START:-} ]]; then
-  command+=" OMARSKI_DEBUG_START=$OMARSKI_DEBUG_START"
+command+=" OMASKI_SIDE=$side OMASKI_SPRITES=$plugin_dir/assets/sprites"
+if [[ -n ${OMASKI_DEBUG_START:-} ]]; then
+  command+=" OMASKI_DEBUG_START=$OMASKI_DEBUG_START"
 fi
 command+=" quickshell -p '$plugin_dir/game'"
 command_json=$(jq -Rn --arg command "$command" '$command')

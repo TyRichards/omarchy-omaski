@@ -45,7 +45,7 @@ FocusScope {
   property bool started: false
   property bool hudVisible: true
 
-  // Debug hook, off unless OMARSKI_DEBUG_START is set to a distance in
+  // Debug hook, off unless OMASKI_DEBUG_START is set to a distance in
   // metres: skips the title card and starts that far down the hill.
   property string debugStartEnv: ""
   readonly property int debugStart: {
@@ -99,7 +99,7 @@ FocusScope {
     running: true
     onTriggered: {
       if (!canvas.isImageLoaded(root.spriteUrl(1)))
-        console.warn("omarski: sprites did not load from " + root.spriteDir)
+        console.warn("omaski: sprites did not load from " + root.spriteDir)
     }
   }
 

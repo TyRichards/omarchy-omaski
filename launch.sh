@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Launch Omarski.
+# Launch Omaski.
 #
 # The window is placed to match Omarchy's "single-window square aspect ratio"
 # layout (SUPER + CTRL + BACKSPACE) exactly: the largest 1:1 square that fits
@@ -11,7 +11,7 @@
 set -euo pipefail
 
 plugin_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-app_id=io.github.tyrichards.omarski
+app_id=io.github.tyrichards.omaski
 sprite_dir="$plugin_dir/assets/sprites"
 
 # ---------------------------------------------------------------------------
@@ -98,11 +98,11 @@ fi
 # The file watcher stays ON: quickshell live-reloads the QML in place when
 # game files change, reusing the same window — no respawn, no re-tiling.
 command="env QS_APP_ID=$app_id"
-command+=" OMARSKI_SIDE=$side OMARSKI_SPRITES=$sprite_dir"
-# Debug only: OMARSKI_DEBUG_START=<metres> ./launch.sh skips the title card
+command+=" OMASKI_SIDE=$side OMASKI_SPRITES=$sprite_dir"
+# Debug only: OMASKI_DEBUG_START=<metres> ./launch.sh skips the title card
 # and starts that far down the hill. See game/Game.qml.
-if [[ -n ${OMARSKI_DEBUG_START:-} ]]; then
-  command+=" OMARSKI_DEBUG_START=$OMARSKI_DEBUG_START"
+if [[ -n ${OMASKI_DEBUG_START:-} ]]; then
+  command+=" OMASKI_DEBUG_START=$OMASKI_DEBUG_START"
 fi
 command+=" quickshell -p '$plugin_dir/game'"
 

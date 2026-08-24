@@ -6,7 +6,7 @@ import Quickshell.Io
 //
 // The launcher applies one-shot Hyprland rules that float this window at the
 // exact geometry Omarchy's "single-window square aspect ratio" layout would
-// produce, so Omarski opens as a true 1:1 square in the same place a lone
+// produce, so Omaski opens as a true 1:1 square in the same place a lone
 // maximised window would sit.
 //
 // The size is requested, not locked: pinning minimumSize to maximumSize makes
@@ -18,9 +18,9 @@ FloatingWindow {
   // Live reload: quickshell watches the game's QML/JS files (on by
   // default) and reloads the config in place when they change, reusing
   // this window — code edits land in the open pane, no respawn, no
-  // re-tiling. OMARSKI_NO_WATCH=1 opts out for throwaway test runs.
+  // re-tiling. OMASKI_NO_WATCH=1 opts out for throwaway test runs.
   Component.onCompleted:
-    Quickshell.watchFiles = Quickshell.env("OMARSKI_NO_WATCH") !== "1"
+    Quickshell.watchFiles = Quickshell.env("OMASKI_NO_WATCH") !== "1"
 
   // Manual nudge for changes the file watcher cannot see (sprite-editor
   // tooling, git checkout of identical-mtime trees):
@@ -35,22 +35,22 @@ FloatingWindow {
 
   // Preferred edge length in logical pixels, from the launcher.
   readonly property int side: {
-    var value = parseInt(Quickshell.env("OMARSKI_SIDE") || "", 10)
+    var value = parseInt(Quickshell.env("OMASKI_SIDE") || "", 10)
     return isNaN(value) || value < 320 ? 886 : value
   }
 
   // Where the sprites live. They ship with the plugin in assets/sprites,
   // next to this shell's directory. Qt.resolvedUrl cannot be used here
   // because Quickshell serves QML from a virtual qrc filesystem, so the real
-  // path comes from Quickshell.shellDir. OMARSKI_SPRITES overrides it for
+  // path comes from Quickshell.shellDir. OMASKI_SPRITES overrides it for
   // experiments with alternative sprite sets.
   readonly property string spriteDir: {
-    var dir = Quickshell.env("OMARSKI_SPRITES") || ""
+    var dir = Quickshell.env("OMASKI_SPRITES") || ""
     if (dir !== "") return dir
     return Quickshell.shellDir + "/../assets/sprites"
   }
 
-  title: "Omarski"
+  title: "Omaski"
   visible: true
   // Black, so any window shape beyond the integer-scaled 128x128 screen
   // shows as PICO-8 letterbox bars.
@@ -68,7 +68,7 @@ FloatingWindow {
     windowActive: true
     focus: true
     // Debug only: start this many metres down the hill. See Game.qml.
-    debugStartEnv: Quickshell.env("OMARSKI_DEBUG_START") || ""
+    debugStartEnv: Quickshell.env("OMASKI_DEBUG_START") || ""
   }
 
   // ------------------------------------------------------------------------
@@ -106,7 +106,7 @@ FloatingWindow {
   Process {
     id: clientCheck
     command: ["bash", "-c",
-      "hyprctl clients -j | jq -e -r 'any(.[]; .class == \"io.github.tyrichards.omarski\")'"]
+      "hyprctl clients -j | jq -e -r 'any(.[]; .class == \"io.github.tyrichards.omaski\")'"]
     stdout: StdioCollector {
       waitForEnd: true
       onStreamFinished: {

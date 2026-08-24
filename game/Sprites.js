@@ -1,6 +1,6 @@
 .pragma library
 
-// Catalog of the 82 original Omarski sprites in assets/sprites/, mapped from
+// Catalog of the 82 original Omaski sprites in assets/sprites/, mapped from
 // sprite id to the role each one plays in the game. Every sprite is
 // referenced by name from here so the engine never hardcodes a bare number.
 //

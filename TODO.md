@@ -1,4 +1,4 @@
-# Omarski TODO
+# Omaski TODO
 
 Upcoming work, roughly in order:
 

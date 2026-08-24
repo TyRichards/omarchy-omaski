@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Render Omarski's original sprite set, in a PICO-8 flavoured style.
+"""Render Omaski's original sprite set, in a PICO-8 flavoured style.
 
 Every sprite in assets/sprites/ is generated from the pixel grids and drawing
 code in this file. The artwork is original to this project — drawn for
-Omarski in a minimalist fantasy-console style, using the 16-colour PICO-8
+Omaski in a minimalist fantasy-console style, using the 16-colour PICO-8
 palette — and is licensed with the rest of the plugin, so the whole
 repository is freely redistributable.
 
@@ -1423,7 +1423,7 @@ def _logo():
     dst = canvas(120, 44)
     mountain(dst, 46, 0, 30, cap=15)
     mountain(dst, 78, 8, 22, cap=11)
-    word = "OMARSKI"
+    word = "OMASKI"
     wx = (120 - text_width(word, 3)) // 2
     wy = 25
     for ox in range(-2, 3):
@@ -1435,15 +1435,13 @@ def _logo():
     # middle vertex bridging the towers just below — so it reads as an M.
     mx = wx + 4 * 3
     fill_rect(dst, mx + 3, wy, mx + 6, wy + 2, "k")
-    # Thicken the R where its bowl meets the leg, but bite a black notch
-    # into its far right edge there — that notch is what says R, not A.
-    rx = wx + 3 * 4 * 3
-    fill_rect(dst, rx + 6, wy + 6, rx + 8, wy + 9, "g")
-    fill_rect(dst, rx + 8, wy + 6, rx + 9, wy + 9, "k")
-    # One mountain pixel leaks through the outline at the S's top-left
-    # corner; ink it over.
-    sx4 = wx + 4 * 4 * 3
-    fill_rect(dst, sx4, wy, sx4 + 1, wy + 1, "k")
+    # Mountains can leak through corner gaps in the outline between
+    # letters; ink over anything in the wordmark band that is not the
+    # word or its outline.
+    for y in range(wy - 2, wy + 5 * 3 + 2):
+        for x in range(wx - 2, wx + text_width(word, 3) + 2):
+            if dst[y][x] not in (".", "k", "g"):
+                dst[y][x] = "k"
     return dst
 
 
