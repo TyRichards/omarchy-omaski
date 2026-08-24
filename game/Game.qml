@@ -22,6 +22,10 @@ FocusScope {
   // The one and only screen.
   readonly property int screen: 128
 
+  // The Game Boy style bezel around it, in game pixels.
+  readonly property int bezel: 9
+  readonly property int frame: screen + 2 * bezel
+
   // The zoom is locked to a whole number of PHYSICAL pixels per game
   // pixel. On a fractionally scaled monitor (Hyprland scale 1.5, say),
   // an integer zoom in logical pixels can still land on half a hardware
@@ -31,7 +35,7 @@ FocusScope {
   // becomes black bars, never a stretched pixel.
   readonly property real dpr: Screen.devicePixelRatio || 1
   readonly property int pxScale: Math.max(1,
-    Math.floor(Math.min(width, height) * dpr / root.screen))
+    Math.floor(Math.min(width, height) * dpr / root.frame))
 
   // The item-space scale and offsets that realise that physical zoom,
   // with the top-left corner pinned to the hardware pixel grid.
@@ -124,10 +128,62 @@ FocusScope {
   // The screen
   // ------------------------------------------------------------------------
 
-  // Letterbox bars around the square screen, PICO-8 black.
+  // The ground around the frame: the same snow as the playfield.
   Rectangle {
     anchors.fill: parent
-    color: "#000000"
+    color: "#FFF1E8"
+  }
+
+  // A kitschy DMG-style screen surround: light grey plastic, dark grey
+  // accent stripes and inner lip, and the classic big rounded corner at
+  // the bottom right. Drawn through the same physical-pixel-exact
+  // transform as the screen, so the frame pixels stay perfect squares.
+  Canvas {
+    id: bezelCanvas
+    width: root.frame * root.itemScale
+    height: root.frame * root.itemScale
+    x: Math.floor((root.width * root.dpr - root.frame * root.pxScale) / 2)
+       / root.dpr
+    y: Math.floor((root.height * root.dpr - root.frame * root.pxScale) / 2)
+       / root.dpr
+    smooth: false
+    antialiasing: false
+    onPaint: root.drawBezel()
+  }
+
+  function drawBezel() {
+    var ctx = bezelCanvas.getContext("2d")
+    var F = root.frame
+    ctx.setTransform(root.itemScale, 0, 0, root.itemScale, 0, 0)
+    ctx.clearRect(0, 0, F, F)
+
+    // Body: light grey plastic with pixel-rounded corners — small ones
+    // everywhere, the goofy big one at the bottom right.
+    ctx.fillStyle = "#C2C3C7"
+    ctx.fillRect(0, 0, F, F)
+    function roundCorner(cx, cy, r, sx, sy) {
+      for (var i = 0; i < r; i++) {
+        var inset = r - Math.floor(Math.sqrt(r * r - (r - i - 0.5) * (r - i - 0.5)))
+        ctx.clearRect(cx + (sx < 0 ? -inset : 0), cy + sy * i
+                      + (sy < 0 ? -1 : 0), inset, 1)
+      }
+    }
+    roundCorner(0, 0, 3, 1, 1)              // top left
+    roundCorner(F, 0, 3, -1, 1)             // top right
+    roundCorner(0, F, 3, 1, -1)             // bottom left
+    roundCorner(F, F, 12, -1, -1)           // bottom right, DMG style
+
+    // Accent stripes across the top bezel, dot-matrix style.
+    ctx.fillStyle = "#5F574F"
+    ctx.fillRect(5, 3, F - 10, 1)
+    ctx.fillRect(5, 5, F - 10, 1)
+
+    // Inner lip: a 1px dark ring hugging the screen.
+    var b = root.bezel
+    ctx.fillRect(b - 1, b - 1, root.screen + 2, 1)
+    ctx.fillRect(b - 1, b + root.screen, root.screen + 2, 1)
+    ctx.fillRect(b - 1, b, 1, root.screen)
+    ctx.fillRect(b + root.screen, b, 1, root.screen)
   }
 
   // The canvas item spans the whole letterboxed square at its final size,
@@ -143,10 +199,8 @@ FocusScope {
     id: canvas
     width: root.screen * root.itemScale
     height: root.screen * root.itemScale
-    x: Math.floor((root.width * root.dpr - root.screen * root.pxScale) / 2)
-       / root.dpr
-    y: Math.floor((root.height * root.dpr - root.screen * root.pxScale) / 2)
-       / root.dpr
+    x: bezelCanvas.x + root.bezel * root.itemScale
+    y: bezelCanvas.y + root.bezel * root.itemScale
     smooth: false
     antialiasing: false
     onPaint: root.draw()

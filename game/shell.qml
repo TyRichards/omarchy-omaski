@@ -52,9 +52,9 @@ FloatingWindow {
 
   title: "Omaski"
   visible: true
-  // Black, so any window shape beyond the integer-scaled 128x128 screen
-  // shows as PICO-8 letterbox bars.
-  color: "#000000"
+  // The snow colour, so the window ground reads as background around the
+  // framed screen instead of black bars.
+  color: "#FFF1E8"
 
   implicitWidth: side
   implicitHeight: side
