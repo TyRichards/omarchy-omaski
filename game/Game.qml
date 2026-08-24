@@ -24,7 +24,7 @@ FocusScope {
   readonly property int screen: 128
 
   // The Game Boy style bezel around it, in game pixels.
-  readonly property int bezel: 9
+  readonly property int bezel: 11
   readonly property int frame: screen + 2 * bezel
 
   // The zoom is locked to a whole number of PHYSICAL pixels per game
@@ -190,8 +190,8 @@ FocusScope {
     ctx.fillRect(b + root.screen, b, 1, root.screen)
 
     // The make on the bottom bezel, puny case, centred.
-    Font.draw(ctx, Math.round((F - Font.width("omarchy", 1)) / 2), 139,
-              "omarchy", 1)
+    Font.draw(ctx, Math.round((F - Font.width("omarchy", 1)) / 2),
+              root.bezel + root.screen + 3, "omarchy", 1)
   }
 
   // The canvas item spans the whole letterboxed square at its final size,
