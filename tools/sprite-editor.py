@@ -137,18 +137,15 @@ def png_size(path):
 
 
 def refresh_game(respawn=False):
-    """Hot-reload sprites in the already-open game window via the stamp
-    file Game.qml watches - no respawn, so the window keeps its size and
-    place. A respawn (refresh-window.sh, geometry-preserving) is only
-    needed when a sprite's dimensions changed, because the running game
-    keeps its anchor table from startup.
+    """Hot-swap art in the open game window via the stamp file Game.qml
+    watches. When a sprite's dimensions changed the game also needs its
+    anchor table refreshed, so refresh-window.sh reloads it in place too.
     """
+    with open(os.path.join(SPRITES_DIR, ".stamp"), "w") as fh:
+        fh.write("%f\n" % time.time())
     if respawn and os.path.exists(REFRESH):
         subprocess.Popen([REFRESH], stdout=subprocess.DEVNULL,
                          stderr=subprocess.DEVNULL)
-        return
-    with open(os.path.join(SPRITES_DIR, ".stamp"), "w") as fh:
-        fh.write("%f\n" % time.time())
 
 
 class Handler(BaseHTTPRequestHandler):
