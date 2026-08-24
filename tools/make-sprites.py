@@ -21,6 +21,7 @@ import argparse
 import json
 import math
 import os
+import re
 import struct
 import zlib
 
@@ -1749,7 +1750,9 @@ def load_override(sid):
     """Hand-edited pixels from the sprite editor win over the builder.
 
     tools/overrides/NNN.txt holds the ASCII grid saved by sprite-editor.py.
-    Delete the file to hand the sprite back to the generator.
+    Its size is authoritative (the editor crops to content), so it may
+    differ from SIZES. Delete the file to hand the sprite back to the
+    generator.
     """
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         "overrides", "%03d.txt" % sid)
@@ -1757,18 +1760,43 @@ def load_override(sid):
         return None
     with open(path) as fh:
         lines = [l for l in fh.read().splitlines() if l.strip()]
-    w, h = SIZES[sid]
-    if len(lines) != h or any(len(l) != w for l in lines):
-        raise SystemExit("override %03d is %dx%d, expected %dx%d"
-                         % (sid, len(lines[0]) if lines else 0, len(lines),
-                            w, h))
+    if not lines or any(len(l) != len(lines[0]) for l in lines):
+        raise SystemExit("override %03d is empty or ragged" % sid)
     return [list(l) for l in lines]
+
+
+def sync_sizes(sizes):
+    """Rewrite the SIZES table in game/Sprites.js to match the real art.
+
+    The game anchors every sprite bottom-center from that table, so it must
+    always reflect the PNGs on disk — including hand-edit overrides whose
+    crop changed a sprite's dimensions.
+    """
+    path = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "game", "Sprites.js")
+    with open(path) as fh:
+        src = fh.read()
+    entries = ["%d: [%d, %d]" % (sid, w, h)
+               for sid, (w, h) in sorted(sizes.items())]
+    lines = []
+    while entries:
+        lines.append("  " + ", ".join(entries[:5]) + ("," if entries[5:] else ""))
+        entries = entries[5:]
+    block = "var SIZES = {\n" + "\n".join(lines) + "\n};"
+    m = re.search(r"var SIZES = \{[^}]*\};", src)
+    if not m:
+        raise SystemExit("SIZES table not found in game/Sprites.js")
+    new = src[:m.start()] + block + src[m.end():]
+    if new != src:
+        with open(path, "w") as fh:
+            fh.write(new)
 
 
 def build(outdir):
     os.makedirs(outdir, exist_ok=True)
     entries = []
     overridden = []
+    actual_sizes = {}
     for sid in sorted(SIZES):
         if sid not in BUILDERS:
             raise SystemExit("no builder for sprite %d" % sid)
@@ -1777,10 +1805,11 @@ def build(outdir):
             overridden.append(sid)
         else:
             rows = BUILDERS[sid]()
-        w, h = SIZES[sid]
-        if len(rows[0]) != w or len(rows) != h:
-            raise SystemExit("sprite %d is %dx%d, expected %dx%d"
-                             % (sid, len(rows[0]), len(rows), w, h))
+            w, h = SIZES[sid]
+            if len(rows[0]) != w or len(rows) != h:
+                raise SystemExit("sprite %d is %dx%d, expected %dx%d"
+                                 % (sid, len(rows[0]), len(rows), w, h))
+        actual_sizes[sid] = (len(rows[0]), len(rows))
         write_png(os.path.join(outdir, "%03d.png" % sid), rows)
         name = BUILDERS[sid].__name__.lstrip("_")
         entries.append(('"%03d %s": %s'
@@ -1795,6 +1824,9 @@ def build(outdir):
         fh.write("const SPRITE_DATA = {\n  ")
         fh.write(",\n  ".join(entries))
         fh.write("\n};\n")
+    sync_sizes(actual_sizes)
+    with open(os.path.join(outdir, ".stamp"), "w") as fh:
+        fh.write("%d\n" % len(SIZES))
     print("wrote %d sprites to %s" % (len(SIZES), outdir))
     if overridden:
         print("hand-edit overrides applied: %s"

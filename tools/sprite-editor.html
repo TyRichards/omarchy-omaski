@@ -200,11 +200,20 @@ window.addEventListener("keydown", ev => {
 });
 
 // --- sprite catalog ---------------------------------------------------------
-function loadAscii(text) {
+const MARGIN = 5;  // transparent working border; the server crops it on save
+
+function loadAscii(text, margin) {
   const lines = text.split("\n").filter(l => l.trim());
   const w = Math.max(...lines.map(l => l.length));
   grid = lines.map(l => l.padEnd(w, ".").split("")
     .map(ch => (ch === "." || PALETTE[ch]) ? ch : "."));
+  if (margin) {
+    const pad = Array(margin).fill(".");
+    grid = grid.map(r => [...pad, ...r, ...pad]);
+    const blank = () => Array(grid[0].length).fill(".");
+    grid = [...Array.from({length: margin}, blank), ...grid,
+            ...Array.from({length: margin}, blank)];
+  }
   undoStack = [];
   dirty = false;
   repaint();
@@ -213,8 +222,9 @@ function loadAscii(text) {
 function show(entry) {
   current = entry;
   pick.value = String(entry.id);
-  loadAscii(entry.art);
-  say(entry.name + "  " + grid[0].length + "x" + grid.length
+  loadAscii(entry.art, MARGIN);
+  const lines = entry.art.split("\n");
+  say(entry.name + "  " + lines[0].length + "x" + lines.length
       + (entry.edited ? "  (hand-edited)" : ""));
 }
 
@@ -266,19 +276,20 @@ async function loadCatalog() {
 // --- save / revert ----------------------------------------------------------
 async function save() {
   if (!current) return;
-  current.art = grid.map(r => r.join("")).join("\n");
   const res = await fetch("/api/save", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({id: current.id, art: current.art}),
+    body: JSON.stringify({id: current.id,
+                          art: grid.map(r => r.join("")).join("\n")}),
   });
   const data = await res.json();
   if (!res.ok) { say(data.error || "save failed", true); return; }
+  current.art = data.art;   // server-cropped to content
   current.edited = true;
-  dirty = false;
   buildDropdown();
-  pick.value = String(current.id);
-  say(current.name + " saved - game refreshed");
+  show(current);
+  say(current.name + " saved as " + data.size[0] + "x" + data.size[1]
+      + " - game reloaded");
 }
 document.getElementById("save").onclick = save;
 

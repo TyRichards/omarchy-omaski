@@ -15,7 +15,9 @@ import argparse
 import importlib.util
 import json
 import os
+import struct
 import subprocess
+import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 TOOLS = os.path.dirname(os.path.abspath(__file__))
@@ -81,23 +83,63 @@ def catalog():
 
 
 def validate(sid, art):
+    """Check palette chars, then crop to the tight bounding box of content.
+
+    The editor gives a transparent working margin around every sprite, so
+    what comes back is trimmed to the pixels that are actually set.
+    """
     if sid not in GEN.SIZES:
         return None, "unknown sprite id %r" % (sid,)
-    w, h = GEN.SIZES[sid]
-    lines = [l for l in art.splitlines() if l.strip()]
-    if len(lines) != h or any(len(l) != w for l in lines):
-        return None, "sprite %03d must stay %dx%d" % (sid, w, h)
+    lines = art.splitlines()
+    if not lines:
+        return None, "sprite is empty"
+    width = max(len(l) for l in lines)
+    lines = [l.ljust(width, ".") for l in lines]
     ok = set(GEN.PALETTE) | {"."}
     bad = set("".join(lines)) - ok
     if bad:
         return None, "unknown palette chars: %s" % "".join(sorted(bad))
+    xs = [x for l in lines for x, c in enumerate(l) if c != "."]
+    ys = [y for y, l in enumerate(lines) if set(l) != {"."}]
+    if not xs:
+        return None, "sprite is empty - draw something first"
+    lines = [l[min(xs):max(xs) + 1] for l in lines[min(ys):max(ys) + 1]]
     return [list(l) for l in lines], None
 
 
-def refresh_game():
-    if os.path.exists(REFRESH):
+def current_sizes():
+    sizes = {}
+    for sid in GEN.SIZES:
+        rows = GEN.load_override(sid)
+        if rows is None:
+            sizes[sid] = GEN.SIZES[sid]
+        else:
+            sizes[sid] = (len(rows[0]), len(rows))
+    return sizes
+
+
+def png_size(path):
+    try:
+        with open(path, "rb") as fh:
+            head = fh.read(24)
+        return struct.unpack(">II", head[16:24])
+    except (OSError, struct.error):
+        return None
+
+
+def refresh_game(respawn=False):
+    """Hot-reload sprites in the already-open game window via the stamp
+    file Game.qml watches - no respawn, so the window keeps its size and
+    place. A respawn (refresh-window.sh, geometry-preserving) is only
+    needed when a sprite's dimensions changed, because the running game
+    keeps its anchor table from startup.
+    """
+    if respawn and os.path.exists(REFRESH):
         subprocess.Popen([REFRESH], stdout=subprocess.DEVNULL,
                          stderr=subprocess.DEVNULL)
+        return
+    with open(os.path.join(SPRITES_DIR, ".stamp"), "w") as fh:
+        fh.write("%f\n" % time.time())
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -140,12 +182,18 @@ class Handler(BaseHTTPRequestHandler):
             if err:
                 self.send(400, {"error": err})
                 return
+            png = os.path.join(SPRITES_DIR, "%03d.png" % sid)
+            resized = png_size(png) != (len(rows[0]), len(rows))
             os.makedirs(OVERRIDES, exist_ok=True)
             with open(override_path(sid), "w") as fh:
                 fh.write("\n".join("".join(r) for r in rows) + "\n")
-            GEN.write_png(os.path.join(SPRITES_DIR, "%03d.png" % sid), rows)
-            refresh_game()
-            self.send(200, {"ok": True})
+            GEN.write_png(png, rows)
+            if resized:
+                GEN.sync_sizes(current_sizes())
+            refresh_game(respawn=resized)
+            art, _ = sprite_art(sid)
+            self.send(200, {"ok": True, "art": art,
+                            "size": [len(rows[0]), len(rows)]})
         elif self.path == "/api/revert":
             if sid not in GEN.SIZES:
                 self.send(400, {"error": "unknown sprite id"})
@@ -154,9 +202,13 @@ class Handler(BaseHTTPRequestHandler):
                 os.remove(override_path(sid))
             except FileNotFoundError:
                 pass
+            png = os.path.join(SPRITES_DIR, "%03d.png" % sid)
             rows = GEN.BUILDERS[sid]()
-            GEN.write_png(os.path.join(SPRITES_DIR, "%03d.png" % sid), rows)
-            refresh_game()
+            resized = png_size(png) != (len(rows[0]), len(rows))
+            GEN.write_png(png, rows)
+            if resized:
+                GEN.sync_sizes(current_sizes())
+            refresh_game(respawn=resized)
             art, _ = sprite_art(sid)
             self.send(200, {"ok": True, "art": art})
         else:

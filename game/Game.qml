@@ -1,4 +1,5 @@
 import QtQuick
+import Quickshell.Io
 import "Engine.js" as Engine
 import "Sprites.js" as Sprites
 import "Font.js" as Font
@@ -64,6 +65,24 @@ FocusScope {
 
   function spriteUrl(id) {
     return root.spriteDir + "/" + (id < 10 ? "00" : "0") + id + ".png"
+  }
+
+  // Hot reload: the sprite tools touch .stamp after rewriting PNGs, and the
+  // open window swaps the art in place — no respawn, geometry untouched.
+  function reloadSprites() {
+    var ids = Object.keys(Sprites.SIZES)
+    for (var i = 0; i < ids.length; i++) {
+      var url = root.spriteUrl(Number(ids[i]))
+      canvas.unloadImage(url)
+      canvas.loadImage(url)
+    }
+    root.repaint()
+  }
+
+  FileView {
+    path: root.spriteDir.replace(/^file:\/\//, "") + "/.stamp"
+    watchChanges: true
+    onFileChanged: root.reloadSprites()
   }
 
   // The paint code skips sprites that are not loaded, which keeps startup
