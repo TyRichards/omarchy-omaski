@@ -1387,43 +1387,22 @@ def _boarder_crash_d():
 
 
 def mountain(dst, apex_x, apex_y, height, cap=6):
-    """A craggy peak, not a plain triangle: the flanks change pitch on the
-    way down and bench out into shoulders, the snow cap covers the top with
-    a hard chevron-zigzag hem, and the whole thing wears a bold 2px black
-    outline to match the wordmark."""
+    """A clean angular peak: dead-straight flanks at one constant pitch a
+    side, a solid white snow cap with a regular chevron hem, a light-blue
+    body, and the bold 2px black outline to match the wordmark."""
     W, H = len(dst[0]), len(dst)
     tmp = canvas(W, H)
-    lx = rx = 0.0
     for j in range(height):
-        t = j / float(height)
-        # Pitch varies down each face, and each side benches out once.
-        ls = 0.65 if t < 0.3 else 1.35 if t < 0.6 else 1.0
-        rs = 1.15 if t < 0.25 else 0.6 if t < 0.5 else 1.35
-        if int(height * 0.50) <= j <= int(height * 0.50) + 1:
-            ls = 0.15
-        if int(height * 0.68) <= j <= int(height * 0.68) + 1:
-            rs = 0.2
-        lx += ls
-        rx += rs
+        lx = int(j * 0.8)
+        rx = int(j * 1.15)
         y = apex_y + j
         if not (0 <= y < H):
             continue
-        for x in range(apex_x - int(lx), apex_x + int(rx) + 1):
+        for x in range(apex_x - lx, apex_x + rx + 1):
             if not (0 <= x < W):
                 continue
             hem = cap + (0, 1, 2, 3, 2, 1)[x % 6]
-            if j < hem:
-                # Snow, dithered with grey so it shows on the white field.
-                c = "w" if (x + y) % 2 else "s"
-            else:
-                c = "d" if (x - apex_x) > int(rx) * 0.35 else "s"
-            tmp[y][x] = c
-    # A ridge crease running down the sunlit face.
-    for j in range(cap + 3, height - 2):
-        x = apex_x - j // 2
-        y = apex_y + j
-        if 0 <= x < W and 0 <= y < H and tmp[y][x] == "s":
-            tmp[y][x] = "d"
+            tmp[y][x] = "w" if j < hem else "b"
     # The bold outline: anything within two pixels of the edge goes black.
     for y in range(H):
         for x in range(W):

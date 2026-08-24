@@ -42,7 +42,29 @@ var GLYPHS = {
   "Ⓞ": ".#####. ##...## ##.#.## ##...## .#####."
 };
 
+// The "puny" lowercase font from the same official sheet (lowercase
+// codepoints): 3x4 glyphs sitting on the shared baseline. Lowercase input
+// selects these, so mixed strings like "version 5.1" typeset exactly as
+// PICO-8 would.
+var PUNY = {
+  "A": "... ### #.# ### #.#", "B": "... ##. ##. #.# ###",
+  "C": "... ### #.. #.. ###", "D": "... ##. #.# #.# ##.",
+  "E": "... ### ##. #.. ###", "F": "... ### ##. #.. #..",
+  "G": "... ### #.. #.# ###", "H": "... #.# #.# ### #.#",
+  "I": "... ### .#. .#. ###", "J": "... ### .#. .#. ##.",
+  "K": "... #.# ##. #.# #.#", "L": "... #.. #.. #.. ###",
+  "M": "... ### ### #.# #.#", "N": "... ##. #.# #.# #.#",
+  "O": "... .## #.# #.# ##.", "P": "... ### #.# ### #..",
+  "Q": "... .#. #.# ##. .##", "R": "... ### #.# ##. #.#",
+  "S": "... .## #.. ..# ##.", "T": "... ### .#. .#. .#.",
+  "U": "... #.# #.# #.# .##", "V": "... #.# #.# ### .#.",
+  "W": "... #.# #.# ### ###", "X": "... #.# .#. #.# #.#",
+  "Y": "... #.# ### ..# ###", "Z": "... ### ..# #.. ###"
+};
+
 function glyph(ch) {
+  if (ch >= "a" && ch <= "z")
+    return (PUNY[ch.toUpperCase()] || GLYPHS[" "]).split(" ");
   return (GLYPHS[ch.toUpperCase()] || GLYPHS[" "]).split(" ");
 }
 

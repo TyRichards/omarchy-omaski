@@ -192,22 +192,23 @@ FocusScope {
               Math.round(top), str, 1)
   }
 
-  // A bordered panel of centred text lines, PICO-8 style.
-  function panel(ctx, cx, top, lines) {
-    var lh = 7
+  // A bordered panel of centred text lines, PICO-8 style: a crisp 1px
+  // rectangular border, snow fill, and the authentic 6px line height.
+  function panel(ctx, cx, top, lines, colour) {
+    var lh = 6
     var w = 0
     for (var i = 0; i < lines.length; i++)
       w = Math.max(w, Font.width(lines[i], 1))
     w += 6
-    var h = lines.length * lh + 3
+    var h = lines.length * lh + 5
     var x = Math.round(cx - w / 2)
-    ctx.fillStyle = root.ink
+    ctx.fillStyle = colour || root.ink
     ctx.fillRect(x - 1, top - 1, w + 2, h + 2)
     ctx.fillStyle = root.snow
     ctx.fillRect(x, top, w, h)
-    ctx.fillStyle = root.ink
+    ctx.fillStyle = colour || root.ink
     for (var j = 0; j < lines.length; j++)
-      text(ctx, cx, top + 2 + j * lh, lines[j])
+      text(ctx, cx, top + 3 + j * lh, lines[j])
   }
 
   function draw() {
@@ -293,7 +294,7 @@ FocusScope {
 
     if (s.over)
       panel(ctx, root.screen / 2, 92,
-            ["YOU HAVE BEEN EATEN.", "F2 TO RESTART"])
+            ["YOU HAVE BEEN EATEN.", "F2 TO RESTART"], "#FF004D")
   }
 
   // Elapsed time squeezed as tight as it goes: M:SS, hours only if earned.
@@ -319,7 +320,7 @@ FocusScope {
     ctx.fillStyle = root.ink
     for (var j = 0; j < rows.length; j++) {
       Font.draw(ctx, root.screen - 2 - Font.width(rows[j], 1),
-                2 + j * 7, rows[j], 1)
+                2 + j * 6, rows[j], 1)
     }
   }
 
@@ -334,14 +335,15 @@ FocusScope {
     }
     ctx.fillStyle = "#29ADFF"   // the skier's jacket blue
     text(ctx, cx, 52, "SKI FREE. AVOID THE YETI.")
-    ctx.fillStyle = root.inkSoft
-    text(ctx, cx, 64, "VERSION 5.1")
     ctx.fillStyle = root.ink
-    text(ctx, cx, 75, "USE NUMPAD (0-9)")
-    text(ctx, cx, 82, "FOR BETTER CONTROL")
-    text(ctx, cx, 92, "Ⓞ = PAUSE  F = FAST ON/OFF")
+    text(ctx, cx, 61, "PRESS ❎ TO SKI")
+    text(ctx, cx, 78, "USE NUMPAD (0-9)")
+    text(ctx, cx, 84, "FOR BETTER CONTROL")
+    text(ctx, cx, 93, "Ⓞ = PAUSE  F = FAST ON/OFF")
     text(ctx, cx, 99, "F2 = RESTART")
-    text(ctx, cx, 113, "PRESS ❎ TO SKI")
+    // Version in the puny lowercase font, lightest PICO-8 grey, tucked low.
+    ctx.fillStyle = root.shadow
+    text(ctx, cx, 121, "version 5.1")
   }
 
   // ------------------------------------------------------------------------
