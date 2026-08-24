@@ -2,10 +2,10 @@
 const SPRITE_DATA = {
   "001 skier_down": "s...s\ns.n.s\nsrrrs\nsfffs\nrbbbr\nrrbrr\n.nnn.\n.n.n.\n.k.k.\n.k.k.\n.k.k.",
   "002 skier_diag_r": "...n....\n...rrr..\n...fff.s\n..rbbbrs\n..rbsb.s\n.k.snn.s\n..knkn.s\n.s.k.k.s\ns...k.k.\n.....k..\n......k.",
-  "003 skier_trav_r": "s..n......\n.ss.rrr...\ns..sfff...\n.ss.rb....\n..ksrb....\n...knr....\n..k.nnk...\n...kk..k..\n.....kk...\n.......k..\n..........",
+  "003 skier_trav_r": "s..n....\n.ss.rrr.\ns..sfff.\n.ss.rb..\n..ksrb..\n...knr..\n..k.nnk.\n...kk..k\n.....kk.\n.......k",
   "004 skier_side_r": "..rrr...\n..rrr...\n.kbbbk..\n.kbbbk..\n.kbbbk..\nkknnnkk.\n.knkkkkk\nkkkkkkkk",
   "005 skier_diag_l": "...n....\n..rrr...\ns.fff...\nsrbbbr..\ns.bsbr..\ns.nnr.k.\ns.nkns..\ns.k.k.s.\n.k.k...s\n..k.....\n.k......",
-  "006 skier_trav_l": "......n..s\n...rrr.ss.\n...fffs..s\n....br.ss.\n....brsk..\n....rnk...\n...knn.k..\n..k..kk...\n...kk.....\n..k.......\n..........",
+  "006 skier_trav_l": "....n..s\n.rrr.ss.\n.fffs..s\n..br.ss.\n..brsk..\n..rnk...\n.knn.k..\nk..kk...\n.kk.....\nk.......",
   "007 skier_side_l": "...rrr..\n...rrr..\n..kbbbk.\n..kbbbk.\n..kbbbk.\n.kknnnkk\nkkkkknk.\nkkkkkkkk",
   "008 skier_step_l": "..rr..\n..fr..\ndbbbbd\ndbbbbd\n.nnn..\n.nnnn.\nkkkkkk\nkkkkkk",
   "009 skier_step_r": "..rr..\n..rf..\ndbbbbd\ndbbbbd\n..nnn.\n.nnnn.\nkkkkkk\nkkkkkk",
