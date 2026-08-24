@@ -1833,6 +1833,7 @@ def build(outdir):
             raise SystemExit("no builder for sprite %d" % sid)
         rows = load_override(sid)
         if rows is not None:
+            # Overrides are authored at the shipped (half) scale already.
             overridden.append(sid)
         else:
             rows = BUILDERS[sid]()
@@ -1840,8 +1841,8 @@ def build(outdir):
             if len(rows[0]) != w or len(rows) != h:
                 raise SystemExit("sprite %d is %dx%d, expected %dx%d"
                                  % (sid, len(rows[0]), len(rows), w, h))
-        if HALF_SCALE and sid not in FULL_SIZE_IDS:
-            rows = half(rows)
+            if HALF_SCALE and sid not in FULL_SIZE_IDS:
+                rows = half(rows)
         actual_sizes[sid] = (len(rows[0]), len(rows))
         write_png(os.path.join(outdir, "%03d.png" % sid), rows)
         name = BUILDERS[sid].__name__.lstrip("_")

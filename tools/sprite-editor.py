@@ -64,11 +64,13 @@ def override_path(sid):
 
 
 def sprite_art(sid):
+    """Art exactly as the game ships it: overrides are stored at shipped
+    scale; generated art is smashed the same way the build does."""
     path = override_path(sid)
     if os.path.exists(path):
         with open(path) as fh:
             return fh.read().strip("\n"), True
-    rows = GEN.BUILDERS[sid]()
+    rows = game_rows(sid, GEN.BUILDERS[sid]())
     return "\n".join("".join(r) for r in rows), False
 
 
@@ -120,8 +122,7 @@ def current_sizes():
         rows = GEN.load_override(sid)
         if rows is None:
             w, h = GEN.SIZES[sid]
-            rows = [["."] * w for _ in range(h)]
-        rows = game_rows(sid, rows)
+            rows = game_rows(sid, [["."] * w for _ in range(h)])
         sizes[sid] = (len(rows[0]), len(rows))
     return sizes
 
@@ -191,12 +192,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(400, {"error": err})
                 return
             png = os.path.join(SPRITES_DIR, "%03d.png" % sid)
-            shipped = game_rows(sid, rows)
-            resized = png_size(png) != (len(shipped[0]), len(shipped))
+            resized = png_size(png) != (len(rows[0]), len(rows))
             os.makedirs(OVERRIDES, exist_ok=True)
             with open(override_path(sid), "w") as fh:
                 fh.write("\n".join("".join(r) for r in rows) + "\n")
-            GEN.write_png(png, shipped)
+            GEN.write_png(png, rows)
             if resized:
                 GEN.sync_sizes(current_sizes())
             refresh_game(respawn=resized)
