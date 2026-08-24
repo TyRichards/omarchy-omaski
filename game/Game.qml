@@ -180,7 +180,7 @@ FocusScope {
     // wide as the dark lip box holding the screen.
     ctx.fillStyle = "#5F574F"
     ctx.fillRect(root.bezel - 1, 3, root.screen + 2, 1)
-    ctx.fillRect(root.bezel - 1, 5, root.screen + 2, 1)
+    ctx.fillRect(root.bezel - 1, 6, root.screen + 2, 1)
 
     // Inner lip: a 1px dark ring hugging the screen.
     var b = root.bezel
@@ -402,7 +402,7 @@ FocusScope {
       shortTime(s.elapsed),
       Math.floor(s.distance) + "M",
       Math.round(s.speed * 2.23694) + "MPH",
-      "RAD:  " + Math.floor(s.style)
+      "RAD:" + Math.floor(s.style)
     ]
     ctx.fillStyle = root.ink
     for (var j = 0; j < rows.length; j++) {
