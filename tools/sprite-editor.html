@@ -46,6 +46,8 @@
 <div class="row">
   <button class="save" id="save" title="Ctrl+S">&#128190; Save to game</button>
   <button id="revert" title="drop hand edits, back to generated art">Revert to generated</button>
+  <select id="copyTarget" title="overwrite another sprite with this canvas"></select>
+  <button id="copyTo">Copy to &#8594;</button>
   <button id="bg">Background: checker</button>
   <span class="hint">drag = draw &nbsp;|&nbsp; right-drag = erase &nbsp;|&nbsp; Ctrl+Z undo &nbsp;|&nbsp; Ctrl+S save &nbsp;|&nbsp; [ ] prev/next</span>
 </div>
@@ -234,8 +236,9 @@ function step(dir) {
   show(n);
 }
 
-function buildDropdown() {
-  pick.innerHTML = "";
+function fillSelect(sel) {
+  const keep = sel.value;
+  sel.innerHTML = "";
   const byGroup = new Map();
   for (const s of sprites) {
     if (!byGroup.has(s.group)) byGroup.set(s.group, []);
@@ -251,8 +254,14 @@ function buildDropdown() {
         + (s.edited ? " *" : "");
       og.appendChild(opt);
     }
-    pick.appendChild(og);
+    sel.appendChild(og);
   }
+  if (keep) sel.value = keep;
+}
+
+function buildDropdown() {
+  fillSelect(pick);
+  fillSelect(document.getElementById("copyTarget"));
 }
 pick.onchange = () => {
   const s = sprites.find(x => x.id === +pick.value);
@@ -306,6 +315,27 @@ document.getElementById("revert").onclick = async () => {
   buildDropdown();
   show(current);
   say(current.name + " reverted to generated art");
+};
+
+// Overwrite another sprite with the current canvas, live in the game.
+document.getElementById("copyTo").onclick = async () => {
+  const target = document.getElementById("copyTarget");
+  const tid = +target.value;
+  if (!current || !tid) return;
+  if (tid === current.id) { say("that IS the current sprite", true); return; }
+  const res = await fetch("/api/save", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({id: tid, art: grid.map(r => r.join("")).join("\n")}),
+  });
+  const data = await res.json();
+  if (!res.ok) { say(data.error || "copy failed", true); return; }
+  const t = sprites.find(s => s.id === tid);
+  t.art = data.art;
+  t.edited = true;
+  buildDropdown();
+  pick.value = String(current.id);
+  say("copied onto " + t.name + " - live in game");
 };
 
 // --- misc -------------------------------------------------------------------
