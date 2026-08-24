@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+#
+# Open the Omarski sprite editor in the browser. Starts the local server
+# if it is not already running. Safe to run repeatedly.
+
+set -euo pipefail
+
+dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+port=${OMARSKI_EDITOR_PORT:-8787}
+url="http://127.0.0.1:$port/"
+
+if ! curl -sf "${url}api/ping" >/dev/null 2>&1; then
+  setsid python3 "$dir/sprite-editor.py" --port "$port" \
+    >/tmp/omarski-sprite-editor.log 2>&1 &
+  for _ in $(seq 1 50); do
+    curl -sf "${url}api/ping" >/dev/null 2>&1 && break
+    sleep 0.1
+  done
+fi
+
+if ! curl -sf "${url}api/ping" >/dev/null 2>&1; then
+  echo "server failed to start; see /tmp/omarski-sprite-editor.log" >&2
+  exit 1
+fi
+
+xdg-open "$url" >/dev/null 2>&1 &
+echo "sprite editor: $url"

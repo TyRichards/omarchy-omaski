@@ -5,47 +5,66 @@
 <title>Omarski sprite editor</title>
 <style>
   body { font-family: monospace; background: #222; color: #eee; margin: 16px; }
-  h1 { font-size: 16px; }
-  .row { margin: 8px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  button, input { font-family: monospace; }
+  h1 { font-size: 16px; margin: 0 0 12px; }
+  .row { margin: 10px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  button, select { font-family: monospace; font-size: 14px; padding: 4px 10px; }
+  select { min-width: 240px; }
+  button.tool { padding: 6px 14px; background: #333; color: #eee; border: 2px solid #555; cursor: pointer; }
+  button.tool.on { border-color: #fff; background: #444; }
+  button.save { background: #295; color: #fff; border: 2px solid #4c7; font-weight: bold; }
   #palette { display: flex; gap: 4px; flex-wrap: wrap; }
   .swatch {
-    width: 28px; height: 28px; border: 2px solid #555; cursor: pointer;
+    width: 30px; height: 30px; border: 2px solid #555; cursor: pointer;
     display: flex; align-items: center; justify-content: center; font-weight: bold;
   }
   .swatch.sel { border-color: #fff; outline: 2px solid #fff; }
   #grid { image-rendering: pixelated; cursor: crosshair; border: 1px solid #555; }
-  textarea { width: 100%; height: 200px; background: #111; color: #0f0; }
+  #preview { image-rendering: pixelated; border: 1px solid #555; background: #FFF1E8; }
+  .work { display: flex; gap: 16px; align-items: flex-start; }
+  textarea { width: 100%; height: 160px; background: #111; color: #0f0; }
   .hint { color: #999; font-size: 12px; }
+  #status { color: #7f7; font-size: 13px; min-width: 200px; }
+  #status.err { color: #f66; }
 </style>
 </head>
 <body>
 <h1>Omarski sprite editor</h1>
 
 <div class="row">
-  <label>Sprite: <select id="pick"><option value="">-- choose --</option></select></label>
-  <label>PNG: <input type="file" id="file" accept=".png"></label>
-  <label>or blank: <input id="bw" type="number" value="16" min="1" max="128" style="width:4em">
-    x <input id="bh" type="number" value="16" min="1" max="128" style="width:4em"></label>
-  <button id="blank">New</button>
-  <button id="fromText">Load ASCII from box below</button>
-</div>
-
-<div class="row" id="palette"></div>
-<div class="hint">left click/drag = paint &nbsp; | &nbsp; right click/drag = erase &nbsp; | &nbsp; Ctrl+Z = undo</div>
-
-<div class="row">
-  <canvas id="grid"></canvas>
+  <select id="pick"></select>
+  <button id="prev" title="previous sprite ([)">&#9664; prev</button>
+  <button id="next" title="next sprite (])">next &#9654;</button>
+  <span id="status"></span>
 </div>
 
 <div class="row">
-  <button id="copy">Copy ASCII</button>
+  <button class="tool on" id="pencil" title="P">&#9998; Pencil</button>
+  <button class="tool" id="eraser" title="E">&#9723; Eraser</button>
+  <div id="palette"></div>
+</div>
+
+<div class="row">
+  <button class="save" id="save" title="Ctrl+S">&#128190; Save to game</button>
+  <button id="revert" title="drop hand edits, back to generated art">Revert to generated</button>
   <button id="bg">Background: checker</button>
-  <span id="status" class="hint"></span>
+  <span class="hint">drag = draw &nbsp;|&nbsp; right-drag = erase &nbsp;|&nbsp; Ctrl+Z undo &nbsp;|&nbsp; Ctrl+S save &nbsp;|&nbsp; [ ] prev/next</span>
 </div>
-<textarea id="out" spellcheck="false"></textarea>
 
-<script src="sprite-data.js"></script>
+<div class="row work">
+  <canvas id="grid"></canvas>
+  <div>
+    <div class="hint">in-game size (3x)</div>
+    <canvas id="preview"></canvas>
+  </div>
+</div>
+
+<details>
+  <summary class="hint">ASCII (copy/paste)</summary>
+  <div class="row"><button id="copy">Copy ASCII</button>
+    <button id="fromText">Load ASCII from box</button></div>
+  <textarea id="out" spellcheck="false"></textarea>
+</details>
+
 <script>
 // Same table as tools/make-sprites.py PALETTE. "." is transparent.
 const PALETTE = {
@@ -56,38 +75,57 @@ const PALETTE = {
   G: "#9ECE6A",
 };
 
-let grid = Array.from({length: 16}, () => Array(16).fill("."));
-let color = "k";           // selected palette char
+let sprites = [];          // [{id, name, group, art, edited}]
+let current = null;        // entry from sprites
+let grid = [["."]];
+let color = "k";
+let tool = "pencil";       // "pencil" | "eraser"
 let snowBg = false;
-let drawing = null;        // "paint" | "erase" while mouse is down
+let drawing = null;
 let undoStack = [];
+let dirty = false;
 
 const canvas = document.getElementById("grid");
 const ctx = canvas.getContext("2d");
+const preview = document.getElementById("preview");
+const pctx = preview.getContext("2d");
 const out = document.getElementById("out");
 const status = document.getElementById("status");
+const pick = document.getElementById("pick");
 
-// --- palette swatches -------------------------------------------------------
+function say(msg, err) {
+  status.textContent = msg;
+  status.className = err ? "err" : "";
+}
+
+// --- palette + tools --------------------------------------------------------
 const palDiv = document.getElementById("palette");
-for (const ch of [...Object.keys(PALETTE), "."]) {
+for (const ch of Object.keys(PALETTE)) {
   const el = document.createElement("div");
   el.className = "swatch";
   el.dataset.ch = ch;
-  if (ch === ".") { el.textContent = "."; el.title = "transparent (eraser)"; }
-  else {
-    el.style.background = PALETTE[ch];
-    el.textContent = ch;
-    el.style.color = ["k","n","v","e","d"].includes(ch) ? "#fff" : "#000";
-    el.title = ch;
-  }
-  el.onclick = () => { color = ch; select(el); };
+  el.style.background = PALETTE[ch];
+  el.textContent = ch;
+  el.style.color = ["k","n","v","e","d"].includes(ch) ? "#fff" : "#000";
+  el.title = ch;
+  el.onclick = () => { color = ch; setTool("pencil"); selectSwatch(el); };
   palDiv.appendChild(el);
 }
-function select(el) {
+function selectSwatch(el) {
   palDiv.querySelectorAll(".swatch").forEach(s => s.classList.remove("sel"));
-  el.classList.add("sel");
+  if (el) el.classList.add("sel");
 }
-select(palDiv.firstChild);
+selectSwatch(palDiv.firstChild);
+
+const pencilBtn = document.getElementById("pencil");
+const eraserBtn = document.getElementById("eraser");
+function setTool(t) {
+  tool = t;
+  pencilBtn.classList.toggle("on", t === "pencil");
+  eraserBtn.classList.toggle("on", t === "eraser");
+}
+pencilBtn.onclick = () => setTool("pencil");
+eraserBtn.onclick = () => setTool("eraser");
 
 // --- drawing ----------------------------------------------------------------
 function pxSize() {
@@ -109,8 +147,18 @@ function repaint() {
   ctx.strokeStyle = "rgba(128,128,128,0.25)";
   for (let x = 0; x <= w; x++) { ctx.beginPath(); ctx.moveTo(x*P, 0); ctx.lineTo(x*P, h*P); ctx.stroke(); }
   for (let y = 0; y <= h; y++) { ctx.beginPath(); ctx.moveTo(0, y*P); ctx.lineTo(w*P, y*P); ctx.stroke(); }
+  // small in-game preview on snow
+  const S = 3;
+  preview.width = w * S; preview.height = h * S;
+  pctx.fillStyle = "#FFF1E8";
+  pctx.fillRect(0, 0, preview.width, preview.height);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const ch = grid[y][x];
+    if (ch === ".") continue;
+    pctx.fillStyle = PALETTE[ch] || "#f0f";
+    pctx.fillRect(x * S, y * S, S, S);
+  }
   out.value = grid.map(r => r.join("")).join("\n");
-  status.textContent = w + " x " + h;
 }
 function cell(ev) {
   const rect = canvas.getBoundingClientRect(), P = pxSize();
@@ -123,119 +171,150 @@ function apply(ev) {
   const c = cell(ev);
   if (!c) return;
   grid[c.y][c.x] = drawing === "erase" ? "." : color;
+  dirty = true;
   repaint();
 }
 canvas.addEventListener("contextmenu", ev => ev.preventDefault());
 canvas.addEventListener("mousedown", ev => {
   undoStack.push(grid.map(r => r.slice()));
-  if (undoStack.length > 100) undoStack.shift();
-  drawing = ev.button === 2 ? "erase" : (color === "." ? "erase" : "paint");
+  if (undoStack.length > 200) undoStack.shift();
+  drawing = (ev.button === 2 || tool === "eraser") ? "erase" : "paint";
   apply(ev);
 });
 canvas.addEventListener("mousemove", ev => { if (drawing) apply(ev); });
 window.addEventListener("mouseup", () => { drawing = null; });
+
 window.addEventListener("keydown", ev => {
-  if ((ev.ctrlKey || ev.metaKey) && ev.key === "z" && undoStack.length) {
-    grid = undoStack.pop();
-    repaint();
+  if ((ev.ctrlKey || ev.metaKey) && ev.key === "z") {
+    if (undoStack.length) { grid = undoStack.pop(); dirty = true; repaint(); }
     ev.preventDefault();
+  } else if ((ev.ctrlKey || ev.metaKey) && ev.key === "s") {
+    save();
+    ev.preventDefault();
+  } else if (ev.target.tagName !== "TEXTAREA" && ev.target.tagName !== "INPUT") {
+    if (ev.key === "e") setTool("eraser");
+    else if (ev.key === "p") setTool("pencil");
+    else if (ev.key === "[") step(-1);
+    else if (ev.key === "]") step(1);
   }
 });
 
-// --- load / new / copy ------------------------------------------------------
+// --- sprite catalog ---------------------------------------------------------
 function loadAscii(text) {
-  const lines = text.split("\n").map(l => l.trim()).filter(l => l);
-  if (!lines.length) return;
+  const lines = text.split("\n").filter(l => l.trim());
   const w = Math.max(...lines.map(l => l.length));
   grid = lines.map(l => l.padEnd(w, ".").split("")
     .map(ch => (ch === "." || PALETTE[ch]) ? ch : "."));
   undoStack = [];
+  dirty = false;
   repaint();
 }
 
-const pick = document.getElementById("pick");
-if (typeof SPRITE_DATA !== "undefined") {
-  for (const name of Object.keys(SPRITE_DATA)) {
-    const opt = document.createElement("option");
-    opt.value = name;
-    opt.textContent = name;
-    pick.appendChild(opt);
+function show(entry) {
+  current = entry;
+  pick.value = String(entry.id);
+  loadAscii(entry.art);
+  say(entry.name + "  " + grid[0].length + "x" + grid.length
+      + (entry.edited ? "  (hand-edited)" : ""));
+}
+
+function step(dir) {
+  if (!current) return;
+  const i = sprites.findIndex(s => s.id === current.id);
+  const n = sprites[(i + dir + sprites.length) % sprites.length];
+  show(n);
+}
+
+function buildDropdown() {
+  pick.innerHTML = "";
+  const byGroup = new Map();
+  for (const s of sprites) {
+    if (!byGroup.has(s.group)) byGroup.set(s.group, []);
+    byGroup.get(s.group).push(s);
   }
-  pick.onchange = () => {
-    if (pick.value) {
-      loadAscii(SPRITE_DATA[pick.value]);
-      status.textContent += "  (" + pick.value + ")";
+  for (const [group, list] of byGroup) {
+    const og = document.createElement("optgroup");
+    og.label = group;
+    for (const s of list) {
+      const opt = document.createElement("option");
+      opt.value = String(s.id);
+      opt.textContent = String(s.id).padStart(3, "0") + " " + s.name
+        + (s.edited ? " *" : "");
+      og.appendChild(opt);
     }
-  };
-} else {
-  pick.disabled = true;
-  pick.title = "run tools/make-sprites.py to generate sprite-data.js";
+    pick.appendChild(og);
+  }
+}
+pick.onchange = () => {
+  const s = sprites.find(x => x.id === +pick.value);
+  if (s) show(s);
+};
+document.getElementById("prev").onclick = () => step(-1);
+document.getElementById("next").onclick = () => step(1);
+
+async function loadCatalog() {
+  const res = await fetch("/api/sprites");
+  const data = await res.json();
+  // keep group order stable, skier first
+  const order = new Map(data.groups.map((g, i) => [g, i]));
+  sprites = data.sprites.slice().sort((a, b) =>
+    (order.get(a.group) - order.get(b.group)) || (a.id - b.id));
+  buildDropdown();
+  show(sprites[0]);
 }
 
-document.getElementById("blank").onclick = () => {
-  const w = +document.getElementById("bw").value || 16;
-  const h = +document.getElementById("bh").value || 16;
-  grid = Array.from({length: h}, () => Array(w).fill("."));
-  undoStack = [];
-  repaint();
+// --- save / revert ----------------------------------------------------------
+async function save() {
+  if (!current) return;
+  current.art = grid.map(r => r.join("")).join("\n");
+  const res = await fetch("/api/save", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({id: current.id, art: current.art}),
+  });
+  const data = await res.json();
+  if (!res.ok) { say(data.error || "save failed", true); return; }
+  current.edited = true;
+  dirty = false;
+  buildDropdown();
+  pick.value = String(current.id);
+  say(current.name + " saved - game refreshed");
+}
+document.getElementById("save").onclick = save;
+
+document.getElementById("revert").onclick = async () => {
+  if (!current) return;
+  const res = await fetch("/api/revert", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({id: current.id}),
+  });
+  const data = await res.json();
+  if (!res.ok) { say(data.error || "revert failed", true); return; }
+  current.art = data.art;
+  current.edited = false;
+  buildDropdown();
+  show(current);
+  say(current.name + " reverted to generated art");
 };
 
-document.getElementById("fromText").onclick = () => loadAscii(out.value);
-
-document.getElementById("file").onchange = ev => {
-  const f = ev.target.files[0];
-  if (!f) return;
-  const img = new Image();
-  img.onload = () => {
-    const c = document.createElement("canvas");
-    c.width = img.width; c.height = img.height;
-    const cx = c.getContext("2d");
-    cx.drawImage(img, 0, 0);
-    const data = cx.getImageData(0, 0, img.width, img.height).data;
-    // exact match first, nearest palette colour as fallback
-    const exact = {};
-    for (const [ch, hex] of Object.entries(PALETTE)) {
-      exact[parseInt(hex.slice(1), 16)] = ch;
-    }
-    grid = [];
-    for (let y = 0; y < img.height; y++) {
-      const row = [];
-      for (let x = 0; x < img.width; x++) {
-        const i = (y * img.width + x) * 4;
-        if (data[i + 3] < 128) { row.push("."); continue; }
-        const key = (data[i] << 16) | (data[i + 1] << 8) | data[i + 2];
-        if (exact[key]) { row.push(exact[key]); continue; }
-        let best = "k", bd = Infinity;
-        for (const [ch, hex] of Object.entries(PALETTE)) {
-          const v = parseInt(hex.slice(1), 16);
-          const dr = data[i] - (v >> 16), dg = data[i+1] - ((v >> 8) & 255), db = data[i+2] - (v & 255);
-          const dist = dr*dr + dg*dg + db*db;
-          if (dist < bd) { bd = dist; best = ch; }
-        }
-        row.push(best);
-      }
-      grid.push(row);
-    }
-    undoStack = [];
-    repaint();
-    status.textContent = img.width + " x " + img.height + "  (" + f.name + ")";
-  };
-  img.src = URL.createObjectURL(f);
-};
-
+// --- misc -------------------------------------------------------------------
 document.getElementById("copy").onclick = () => {
   out.select();
   navigator.clipboard ? navigator.clipboard.writeText(out.value) : document.execCommand("copy");
-  status.textContent = "copied";
+  say("copied");
 };
-
+document.getElementById("fromText").onclick = () => { loadAscii(out.value); dirty = true; };
 document.getElementById("bg").onclick = ev => {
   snowBg = !snowBg;
   ev.target.textContent = "Background: " + (snowBg ? "snow" : "checker");
   repaint();
 };
+window.addEventListener("beforeunload", ev => {
+  if (dirty) ev.preventDefault();
+});
 
-repaint();
+loadCatalog().catch(() => say("open this page via tools/edit-sprites (needs the server)", true));
 </script>
 </body>
 </html>

@@ -1745,13 +1745,38 @@ k..k
 # ---------------------------------------------------------------------------
 
 
+def load_override(sid):
+    """Hand-edited pixels from the sprite editor win over the builder.
+
+    tools/overrides/NNN.txt holds the ASCII grid saved by sprite-editor.py.
+    Delete the file to hand the sprite back to the generator.
+    """
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                        "overrides", "%03d.txt" % sid)
+    if not os.path.exists(path):
+        return None
+    with open(path) as fh:
+        lines = [l for l in fh.read().splitlines() if l.strip()]
+    w, h = SIZES[sid]
+    if len(lines) != h or any(len(l) != w for l in lines):
+        raise SystemExit("override %03d is %dx%d, expected %dx%d"
+                         % (sid, len(lines[0]) if lines else 0, len(lines),
+                            w, h))
+    return [list(l) for l in lines]
+
+
 def build(outdir):
     os.makedirs(outdir, exist_ok=True)
     entries = []
+    overridden = []
     for sid in sorted(SIZES):
         if sid not in BUILDERS:
             raise SystemExit("no builder for sprite %d" % sid)
-        rows = BUILDERS[sid]()
+        rows = load_override(sid)
+        if rows is not None:
+            overridden.append(sid)
+        else:
+            rows = BUILDERS[sid]()
         w, h = SIZES[sid]
         if len(rows[0]) != w or len(rows) != h:
             raise SystemExit("sprite %d is %dx%d, expected %dx%d"
@@ -1771,6 +1796,9 @@ def build(outdir):
         fh.write(",\n  ".join(entries))
         fh.write("\n};\n")
     print("wrote %d sprites to %s" % (len(SIZES), outdir))
+    if overridden:
+        print("hand-edit overrides applied: %s"
+              % ", ".join("%03d" % s for s in overridden))
 
 
 def main():
