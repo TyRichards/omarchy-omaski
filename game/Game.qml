@@ -176,24 +176,23 @@ FocusScope {
     ctx.clearRect(0, F - 1, 1, 1)
     roundCorner(F, F, 12, -1, -1)
 
-    // Inner lip: a 1px dark ring hugging the screen.
+    // Accent stripes across the top bezel, dot-matrix style — exactly as
+    // wide as the dark lip box holding the screen.
     ctx.fillStyle = "#5F574F"
+    ctx.fillRect(root.bezel - 1, 4, root.screen + 2, 1)
+    ctx.fillRect(root.bezel - 1, 6, root.screen + 2, 1)
+
+    // Inner lip: a 1px dark ring hugging the screen.
     var b = root.bezel
     ctx.fillRect(b - 1, b - 1, root.screen + 2, 1)
     ctx.fillRect(b - 1, b + root.screen, root.screen + 2, 1)
     ctx.fillRect(b - 1, b, 1, root.screen)
     ctx.fillRect(b + root.screen, b, 1, root.screen)
 
-    // The make on the bottom bezel, puny case, centred, with the double
-    // accent lines split to run alongside it left and right.
-    var tw = Font.width("omarchy", 1)
-    var tx = Math.round((F - tw) / 2)
-    var ty = root.bezel + root.screen + 3
-    Font.draw(ctx, tx, ty, "omarchy", 1)
-    ctx.fillRect(root.bezel - 1, ty + 1, tx - 3 - (root.bezel - 1), 1)
-    ctx.fillRect(root.bezel - 1, ty + 3, tx - 3 - (root.bezel - 1), 1)
-    ctx.fillRect(tx + tw + 3, ty + 1, F - (root.bezel - 1) - (tx + tw + 3), 1)
-    ctx.fillRect(tx + tw + 3, ty + 3, F - (root.bezel - 1) - (tx + tw + 3), 1)
+    // The make on the bottom bezel, puny case, flush with the left edge
+    // of the game box.
+    Font.draw(ctx, root.bezel - 1, root.bezel + root.screen + 3,
+              "omarchy", 1)
   }
 
   // The canvas item spans the whole letterboxed square at its final size,
