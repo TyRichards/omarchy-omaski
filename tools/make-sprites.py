@@ -26,8 +26,8 @@ import struct
 import zlib
 
 # ---------------------------------------------------------------------------
-# Palette: the 16 PICO-8 colours, one character each, plus one colour from
-# PICO-8's official secret (extended) palette for the logo wordmark.
+# Palette: the 16 PICO-8 colours, one character each. Nothing else — every
+# colour in the game locks to one of the official PICO-8 sixteen.
 # ---------------------------------------------------------------------------
 # '.' (and ' ') are transparent.
 
@@ -48,7 +48,6 @@ PALETTE = {
     "l": (0x83, 0x76, 0x9C, 255),   # 13 indigo
     "m": (0xFF, 0x77, 0xA8, 255),   # 14 pink
     "f": (0xFF, 0xCC, 0xAA, 255),   # 15 peach
-    "h": (0xA8, 0xE7, 0x2E, 255),   # 138 light green (PICO-8 secret palette)
 }
 
 # Sprite canvas sizes, kept identical to game/Sprites.js. At 8 px/metre these
@@ -1387,6 +1386,19 @@ def _boarder_crash_d():
 # --- title card and hints --------------------------------------------------
 
 
+def synth_sun(dst, cx, cy, r):
+    for y in range(cy - r, cy + r + 1):
+        dy = y - cy
+        if dy in (2, 5, 7):        # scanline gaps toward the bottom
+            continue
+        half = int((r * r - dy * dy) ** 0.5)
+        c = "y" if dy < -2 else ("o" if dy <= 2 else "r")
+        for x in range(cx - half, cx + half + 1):
+            if 0 <= x < len(dst[0]) and 0 <= y < len(dst):
+                dst[y][x] = c
+    return dst
+
+
 def mountain(dst, apex_x, apex_y, height, cap=6):
     """A clean angular peak: dead-straight flanks at one constant pitch a
     side, a solid white snow cap with a regular chevron hem, a light-blue
@@ -1394,8 +1406,8 @@ def mountain(dst, apex_x, apex_y, height, cap=6):
     W, H = len(dst[0]), len(dst)
     tmp = canvas(W, H)
     for j in range(height):
-        lx = int(j * 0.8)
-        rx = int(j * 1.15)
+        lx = j
+        rx = j
         y = apex_y + j
         if not (0 <= y < H):
             continue
@@ -1422,8 +1434,12 @@ def _logo():
     # Mountains behind a fat Omarchy-green wordmark with a uniform 2px
     # black outline. The snow caps cover the top half of each peak.
     dst = canvas(120, 44)
+    # A vaporwave sun rises in the valley between the peaks: yellow crown,
+    # orange belly, red base, with the classic scanline gaps low down.
+    synth_sun(dst, 59, 9, 8)
     mountain(dst, 46, 0, 30, cap=15)
-    mountain(dst, 78, 8, 22, cap=11)
+    # The second peak's 45-degree base ends flush with the I (x = 94).
+    mountain(dst, 72, 8, 22, cap=11)
     word = "OMASKI"
     wx = (120 - text_width(word, 3)) // 2
     wy = 25
@@ -1431,7 +1447,7 @@ def _logo():
         for oy in range(-2, 3):
             if ox or oy:
                 draw_text(dst, wx + ox, wy + oy, word, "k", 3)
-    draw_text(dst, wx, wy, word, "h", 3)
+    draw_text(dst, wx, wy, word, "g", 3)
     # A shallow notch down from the top edge of the big M, leaving its
     # middle vertex bridging the towers just below — so it reads as an M.
     mx = wx + 4 * 3
@@ -1441,7 +1457,7 @@ def _logo():
     # word or its outline.
     for y in range(wy - 2, wy + 5 * 3 + 2):
         for x in range(wx - 2, wx + text_width(word, 3) + 2):
-            if dst[y][x] not in (".", "k", "h"):
+            if dst[y][x] not in (".", "k", "g"):
                 dst[y][x] = "k"
     return dst
 

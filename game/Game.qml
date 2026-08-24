@@ -37,8 +37,8 @@ FocusScope {
   // with the top-left corner pinned to the hardware pixel grid.
   readonly property real itemScale: root.pxScale / root.dpr
 
-  // The skier sits about a third of the way down, as in the classic.
-  readonly property int skierY: 44
+  // The skier rides high on the screen for extra reaction time.
+  readonly property int skierY: 34
 
   property var sim: Engine.createState()
   property var events: []
@@ -357,17 +357,20 @@ FocusScope {
       ctx.drawImage(logoUrl,
                     Math.round(cx - Sprites.width(Sprites.LOGO) / 2), 3)
     }
-    ctx.fillStyle = "#29ADFF"   // the skier's jacket blue
-    text(ctx, cx, 52, "SKI FREE. AVOID THE YETI.")
+    // Tagline and start prompt, dead centre of the page.
+    ctx.fillStyle = "#FF004D"   // PICO-8 red
+    text(ctx, cx, 58, "SKI FREE. AVOID THE YETI.")
     ctx.fillStyle = root.ink
-    text(ctx, cx, 61, "PRESS ❎ TO SKI")
-    text(ctx, cx, 78, "USE NUMPAD (0-9)")
-    text(ctx, cx, 84, "FOR BETTER CONTROL")
-    text(ctx, cx, 93, "Ⓞ = PAUSE  F = FAST ON/OFF")
-    text(ctx, cx, 99, "F2 = RESTART")
+    text(ctx, cx, 65, "PRESS ⬇ TO SKI")
+    // The key hints, dark grey, low on the page.
+    ctx.fillStyle = root.inkSoft
+    text(ctx, cx, 88, "USE NUMPAD (0-9)")
+    text(ctx, cx, 94, "FOR BETTER CONTROL")
+    text(ctx, cx, 103, "F = FAST ON/OFF")
+    text(ctx, cx, 109, "F2 = RESTART  F3 = PAUSE")
     // Version in the puny lowercase font, lightest PICO-8 grey, tucked low.
     ctx.fillStyle = root.shadow
-    text(ctx, cx, 121, "version 5.1")
+    text(ctx, cx, 121, "version 5.3")
   }
 
   // ------------------------------------------------------------------------
