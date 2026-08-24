@@ -47,8 +47,8 @@ var SPEED_BY_HEADING = [15.0, 15.0, 15.0, 0.0];
 
 // Unit direction of travel per |heading|: [sideways, downhill]. These give
 // the classic downhill components (15 / 12.5 / 8 / 0 m/s at full speed).
-var DIR_SIDE = [0.0, 0.403, 0.747, 1.0];
-var DIR_DOWN = [1.0, 0.916, 0.664, 0.0];
+var DIR_SIDE = [0.0, 0.707, 0.747, 1.0];
+var DIR_DOWN = [1.0, 0.707, 0.664, 0.0];
 
 var ACCEL = 9.0;                 // m/s^2 gained pointing down the hill
 var BRAKE = 22.0;                // m/s^2 scrubbed when edging above target
