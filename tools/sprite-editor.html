@@ -48,6 +48,8 @@
   <button id="revert" title="drop hand edits, back to generated art">Revert to generated</button>
   <button id="copyTo">Copy to &#8594;</button>
   <select id="copyTarget" title="overwrite another sprite with this canvas"></select>
+  <button id="mirrorTo" title="flip horizontally, then overwrite">Mirror to &#8594;</button>
+  <select id="mirrorTarget" title="overwrite another sprite with the flipped canvas"></select>
   <button id="bg">Background: checker</button>
   <span class="hint">drag = draw &nbsp;|&nbsp; right-drag = erase &nbsp;|&nbsp; Ctrl+Z undo &nbsp;|&nbsp; Ctrl+S save &nbsp;|&nbsp; [ ] prev/next</span>
 </div>
@@ -262,6 +264,7 @@ function fillSelect(sel) {
 function buildDropdown() {
   fillSelect(pick);
   fillSelect(document.getElementById("copyTarget"));
+  fillSelect(document.getElementById("mirrorTarget"));
 }
 pick.onchange = () => {
   const s = sprites.find(x => x.id === +pick.value);
@@ -317,26 +320,30 @@ document.getElementById("revert").onclick = async () => {
   say(current.name + " reverted to generated art");
 };
 
-// Overwrite another sprite with the current canvas, live in the game.
-document.getElementById("copyTo").onclick = async () => {
-  const target = document.getElementById("copyTarget");
+// Overwrite another sprite with the current canvas (optionally flipped),
+// live in the game.
+async function sendCanvasTo(selectId, flip, verb) {
+  const target = document.getElementById(selectId);
   const tid = +target.value;
   if (!current || !tid) return;
-  if (tid === current.id) { say("that IS the current sprite", true); return; }
+  if (tid === current.id && !flip) { say("that IS the current sprite", true); return; }
+  const rows = grid.map(r => flip ? r.slice().reverse().join("") : r.join(""));
   const res = await fetch("/api/save", {
     method: "POST",
     headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({id: tid, art: grid.map(r => r.join("")).join("\n")}),
+    body: JSON.stringify({id: tid, art: rows.join("\n")}),
   });
   const data = await res.json();
-  if (!res.ok) { say(data.error || "copy failed", true); return; }
+  if (!res.ok) { say(data.error || verb + " failed", true); return; }
   const t = sprites.find(s => s.id === tid);
   t.art = data.art;
   t.edited = true;
   buildDropdown();
   pick.value = String(current.id);
-  say("copied onto " + t.name + " - live in game");
-};
+  say(verb + " onto " + t.name + " - live in game");
+}
+document.getElementById("copyTo").onclick = () => sendCanvasTo("copyTarget", false, "copied");
+document.getElementById("mirrorTo").onclick = () => sendCanvasTo("mirrorTarget", true, "mirrored");
 
 // --- misc -------------------------------------------------------------------
 document.getElementById("copy").onclick = () => {
