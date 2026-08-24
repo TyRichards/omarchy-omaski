@@ -1,8 +1,9 @@
-..rr..
-..fr..
-dbbbbd
-dbbbbd
-.nnn..
-.nnnn.
-kkkkkk
-kkkkkk
+......n...
+...rrr....
+...fff....
+..d.brbd..
+..rrrrbd..
+k...nn....
+.kkkknnk..
+.k...nn...
+..kkkkkkkk
