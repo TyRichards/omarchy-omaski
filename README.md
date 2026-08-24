@@ -1,3 +1,5 @@
+![Omaski logo](docs/logo.png)
+
 # Omaski
 
 ![Omaski demo](docs/demo.gif)
