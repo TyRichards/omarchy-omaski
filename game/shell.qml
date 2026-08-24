@@ -52,9 +52,10 @@ FloatingWindow {
 
   title: "Omaski"
   visible: true
-  // The snow colour, so the window ground reads as background around the
-  // framed screen instead of black bars.
-  color: "#FFF1E8"
+  // The desktop's ANSI background colour (from the launcher), so the
+  // ground around the frame matches the terminal theme. Snow fallback.
+  readonly property string bgColor: Quickshell.env("OMASKI_BG") || "#FFF1E8"
+  color: bgColor
 
   implicitWidth: side
   implicitHeight: side
@@ -65,6 +66,7 @@ FloatingWindow {
   Game {
     anchors.fill: parent
     spriteDir: window.spriteDir
+    groundColor: window.bgColor
     windowActive: true
     focus: true
     // Debug only: start this many metres down the hill. See Game.qml.

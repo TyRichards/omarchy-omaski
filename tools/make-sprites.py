@@ -1436,10 +1436,10 @@ def _logo():
     dst = canvas(120, 44)
     # A vaporwave sun rises in the valley between the peaks: yellow crown,
     # orange belly, red base, with the classic scanline gaps low down.
-    synth_sun(dst, 62, 9, 8)
-    mountain(dst, 50, 0, 30, cap=15)
+    synth_sun(dst, 69, 9, 8)
+    mountain(dst, 53, 0, 30, cap=15)
     # The second peak's 45-degree base ends flush with the I (x = 94).
-    mountain(dst, 76, 8, 18, cap=11)
+    mountain(dst, 79, 8, 15, cap=9)
     word = "OMASKI"
     wx = (120 - text_width(word, 3)) // 2
     wy = 25
@@ -1447,17 +1447,24 @@ def _logo():
         for oy in range(-2, 3):
             if ox or oy:
                 draw_text(dst, wx + ox, wy + oy, word, "k", 3)
-    draw_text(dst, wx, wy, word, "g", 3)
+    draw_text(dst, wx, wy, word, "r", 3)
     # A shallow notch down from the top edge of the big M, leaving its
     # middle vertex bridging the towers just below — so it reads as an M.
     mx = wx + 4 * 3
     fill_rect(dst, mx + 3, wy, mx + 6, wy + 2, "k")
+    # The narrow I leaves a see-through pocket left of its stem, below the
+    # top serif; fill it so the letter sits on solid black like the rest.
+    ix = wx + 5 * 4 * 3
+    for y in range(wy, wy + 5 * 3 + 2):
+        for x in range(ix - 3, ix + 3):
+            if dst[y][x] == ".":
+                dst[y][x] = "k"
     # Mountains can leak through corner gaps in the outline between
     # letters; ink over anything in the wordmark band that is not the
     # word or its outline.
     for y in range(wy - 2, wy + 5 * 3 + 2):
         for x in range(wx - 2, wx + text_width(word, 3) + 2):
-            if dst[y][x] not in (".", "k", "g"):
+            if dst[y][x] not in (".", "k", "r"):
                 dst[y][x] = "k"
     return dst
 

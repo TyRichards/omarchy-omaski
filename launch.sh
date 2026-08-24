@@ -97,8 +97,16 @@ fi
 #
 # The file watcher stays ON: quickshell live-reloads the QML in place when
 # game files change, reusing the same window — no respawn, no re-tiling.
+# The ground around the game's frame follows the desktop's terminal theme.
+theme_bg=$(grep -m1 '^background' \
+  ~/.local/state/omarchy/current/theme/alacritty.toml 2>/dev/null |
+  grep -o '#[0-9a-fA-F]*' || true)
+
 command="env QS_APP_ID=$app_id"
 command+=" OMASKI_SIDE=$side OMASKI_SPRITES=$sprite_dir"
+if [[ -n $theme_bg ]]; then
+  command+=" OMASKI_BG=$theme_bg"
+fi
 # Debug only: OMASKI_DEBUG_START=<metres> ./launch.sh skips the title card
 # and starts that far down the hill. See game/Game.qml.
 if [[ -n ${OMASKI_DEBUG_START:-} ]]; then

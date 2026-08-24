@@ -18,6 +18,7 @@ FocusScope {
 
   required property string spriteDir
   property bool windowActive: true
+  property string groundColor: "#FFF1E8"
 
   // The one and only screen.
   readonly property int screen: 128
@@ -35,7 +36,7 @@ FocusScope {
   // becomes black bars, never a stretched pixel.
   readonly property real dpr: Screen.devicePixelRatio || 1
   readonly property int pxScale: Math.max(1,
-    Math.floor(Math.min(width, height) * dpr / root.frame))
+    Math.floor(Math.min(width, height) * dpr / (root.frame + 10)))
 
   // The item-space scale and offsets that realise that physical zoom,
   // with the top-left corner pinned to the hardware pixel grid.
@@ -128,10 +129,10 @@ FocusScope {
   // The screen
   // ------------------------------------------------------------------------
 
-  // The ground around the frame: the same snow as the playfield.
+  // The ground around the frame: the desktop's ANSI background colour.
   Rectangle {
     anchors.fill: parent
-    color: "#FFF1E8"
+    color: root.groundColor
   }
 
   // A kitschy DMG-style screen surround: light grey plastic, dark grey
@@ -184,6 +185,10 @@ FocusScope {
     ctx.fillRect(b - 1, b + root.screen, root.screen + 2, 1)
     ctx.fillRect(b - 1, b, 1, root.screen)
     ctx.fillRect(b + root.screen, b, 1, root.screen)
+
+    // The make on the bottom bezel, puny case, centred.
+    Font.draw(ctx, Math.round((F - Font.width("omarchy", 1)) / 2), 139,
+              "omarchy", 1)
   }
 
   // The canvas item spans the whole letterboxed square at its final size,
@@ -412,7 +417,7 @@ FocusScope {
                     Math.round(cx - Sprites.width(Sprites.LOGO) / 2), 9)
     }
     // Tagline and start prompt, balanced between logo and instructions.
-    ctx.fillStyle = "#FF004D"   // PICO-8 red
+    ctx.fillStyle = "#29ADFF"   // PICO-8 blue
     text(ctx, cx, 64, "SKI FREE. AVOID THE YETI.")
     ctx.fillStyle = root.ink
     text(ctx, cx, 71, "PRESS ⬇ TO SKI")
@@ -423,7 +428,7 @@ FocusScope {
     text(ctx, cx, 109, "F2 = RESTART  F3 = PAUSE")
     // Version in the puny lowercase font, lightest PICO-8 grey, tucked low.
     ctx.fillStyle = root.shadow
-    text(ctx, cx, 121, "version 5.3")
+    text(ctx, cx, 121, "version 5.5")
   }
 
   // ------------------------------------------------------------------------
