@@ -215,6 +215,13 @@ function playTick(s, ev) {
   Engine.turn(s, 1);
   check('a key picks you back up', !s.crashed && s.graceTimer > 0);
 
+  // The down key (setHeading) gets you moving again too.
+  const dn = Engine.createState();
+  Engine.crash(dn, Sprites.CRASH_SIT, ev);
+  for (let i = 0; i < 60; i++) Engine.step(dn, dt, ev);
+  Engine.setHeading(dn, 0);
+  check('down picks you back up after a crash', !dn.crashed);
+
   // But not instantly: the minimum sit has to be served first.
   const t = Engine.createState();
   Engine.crash(t, Sprites.CRASH_SIT, ev);

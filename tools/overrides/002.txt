@@ -3,8 +3,8 @@
 ...fff.s
 ..rbbbrs
 ..rbsb.s
-.k.rnn.s
-..snkn.s
+.k.snn.s
+..knkn.s
 .s.k.k.s
 s...k.k.
 .....k..

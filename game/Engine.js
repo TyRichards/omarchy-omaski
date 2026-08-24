@@ -726,7 +726,12 @@ function turn(state, delta) {
 }
 
 function setHeading(state, heading) {
-  if (state.crashed || state.eaten || state.over || state.airborne) return;
+  if (state.eaten || state.over || state.airborne) return;
+  if (state.crashed) {
+    // Any steering input picks you back up, the down key included.
+    getUp(state);
+    return;
+  }
   state.heading = Math.max(-MAX_HEADING, Math.min(MAX_HEADING, heading));
 }
 
