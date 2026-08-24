@@ -353,7 +353,7 @@ FocusScope {
           var bx = sx(s.x) - (Sprites.width(Sprites.CRASH_OUCH) >> 1)
           var by = sy(s.y) - Sprites.height(s.crashSprite)
                  - Sprites.height(Sprites.CRASH_OUCH) - 2
-          ctx.drawImage(burstUrl, bx, by)
+          ctx.drawImage(burstUrl, bx, by + 3)
           ctx.fillStyle = root.ink
           text(ctx, sx(s.x),
                by + Math.round(Sprites.height(Sprites.CRASH_OUCH) / 2) - 2,
@@ -377,7 +377,7 @@ FocusScope {
     if (root.hudVisible) root.drawHud(ctx)
 
     if (s.paused)
-      panel(ctx, root.screen / 2, 56, ["PAUSED - Ⓞ TO SKI"])
+      panel(ctx, root.screen / 2, 56, ["PAUSED - ⬇ TO SKI"])
 
     if (s.over)
       panel(ctx, root.screen / 2, 92,
@@ -465,6 +465,8 @@ FocusScope {
     case Qt.Key_Down:
     case Qt.Key_S:
       // Holding down is a tuck: straight downhill at full F-speed.
+      // It also resumes from pause, as the pause panel promises.
+      s.paused = false
       Engine.setHeading(s, 0)
       s.fast = true
       break
