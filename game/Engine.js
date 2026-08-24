@@ -740,8 +740,6 @@ function stepUp(state) {
   }
   if (state.eaten || state.over || state.airborne) return;
   if (Math.abs(state.heading) !== MAX_HEADING || state.speed > 0.5) return;
-  var dir = state.heading > 0 ? 1 : -1;
-  state.x = wrap(state.x + dir * STEP_UP * 0.4);
   state.y = wrap(state.y - STEP_UP);
   state.walkPhase = !state.walkPhase;
   state.walkTimer = 0.3;
