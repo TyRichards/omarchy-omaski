@@ -151,9 +151,29 @@ OMASKI_DEBUG_START=1990 quickshell -p ./game
 ## Install
 
 ```bash
+omarchy plugin add https://github.com/TyRichards/omarchy-omaski --enable
+```
+
+Then add the Omaski widget to your bar, or launch it from the app list
+(`tools/install-app-entry.sh` registers the desktop entry).
+
+Installing by hand instead: clone this repository into
+`~/.config/omarchy/plugins/io.github.tyrichards.omaski`, then
+
+```bash
 omarchy plugin validate .
 omarchy plugin enable io.github.tyrichards.omaski
 ```
+
+## Uninstall
+
+```bash
+omarchy plugin remove io.github.tyrichards.omaski
+```
+
+Remove the optional app-list entry with
+`rm ~/.local/share/applications/omaski.desktop
+~/.local/share/icons/hicolor/256x256/apps/omaski.png`.
 
 Saving any file under `~/.config/omarchy/plugins/` hot-reloads the plugin.
 
