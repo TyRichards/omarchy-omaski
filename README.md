@@ -1,5 +1,9 @@
 # Omaski
 
+[![Omaski demo](docs/demo.gif)](docs/demo.mp4)
+
+*Click the demo for full quality.*
+
 A skiing game for Omarchy in the spirit of the 1991 classic SkiFree, rebuilt
 to run natively on Hyprland — with **all-original artwork** in a chunky,
 minimalist fantasy-console style, so the whole plugin is freely
