@@ -143,9 +143,9 @@ def refresh_game(respawn=False):
     """
     with open(os.path.join(SPRITES_DIR, ".stamp"), "w") as fh:
         fh.write("%f\n" % time.time())
-    if respawn and os.path.exists(REFRESH):
-        subprocess.Popen([REFRESH], stdout=subprocess.DEVNULL,
-                         stderr=subprocess.DEVNULL)
+    # A size change leaves the running window's anchor table a pixel or
+    # two stale, but never interrupt the run for it - the art itself
+    # hot-swaps via the stamp, and the next natural reload trues it up.
 
 
 class Handler(BaseHTTPRequestHandler):
