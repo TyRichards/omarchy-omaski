@@ -130,21 +130,24 @@ FocusScope {
     color: "#000000"
   }
 
+  // The canvas item spans the whole letterboxed square at its final size,
+  // and the DRAWING CONTEXT is scaled instead of the item. Qt sizes the
+  // canvas framebuffer at item-size x devicePixelRatio, which here lands on
+  // exactly 128 x pxScale texels — so every game pixel rasterises as a
+  // perfect pxScale-sized square of hardware pixels, on the first frame and
+  // every frame after. (Scaling a 128px item's texture instead looks right
+  // only until Qt recreates the canvas framebuffer DPR-multiplied — the
+  // first repaint after startup — which smeared everything on fractionally
+  // scaled monitors.)
   Canvas {
     id: canvas
-    width: root.screen
-    height: root.screen
-    // The backing store is exactly 128x128 texels — never DPR-multiplied —
-    // so the game truly rasterises on the 128 grid and only the final
-    // texture blit scales it up.
-    canvasSize: Qt.size(root.screen, root.screen)
+    width: root.screen * root.itemScale
+    height: root.screen * root.itemScale
     x: Math.floor((root.width * root.dpr - root.screen * root.pxScale) / 2)
        / root.dpr
     y: Math.floor((root.height * root.dpr - root.screen * root.pxScale) / 2)
        / root.dpr
-    transformOrigin: Item.TopLeft
-    scale: root.itemScale
-    smooth: false          // nearest-neighbour upscale: big square pixels
+    smooth: false
     antialiasing: false
     onPaint: root.draw()
     // Repaint as sprites arrive so the title card fills in.
@@ -233,6 +236,10 @@ FocusScope {
     var s = root.sim
     var PX = Engine.PIXELS_PER_METRE
 
+    // All game code draws in 128x128 coordinates; this transform maps one
+    // game pixel to a whole number of hardware pixels (itemScale x dpr ==
+    // pxScale, an integer), so integer coordinates rasterise crisply.
+    ctx.setTransform(root.itemScale, 0, 0, root.itemScale, 0, 0)
     ctx.imageSmoothingEnabled = false
     ctx.fillStyle = root.snow
     ctx.fillRect(0, 0, root.screen, root.screen)
