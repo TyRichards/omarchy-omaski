@@ -26,8 +26,8 @@ import struct
 import zlib
 
 # ---------------------------------------------------------------------------
-# Palette: the 16 PICO-8 colours, one character each. Nothing else — the
-# game follows strict PICO-8 limitations.
+# Palette: the 16 PICO-8 colours, one character each, plus one colour from
+# PICO-8's official secret (extended) palette for the logo wordmark.
 # ---------------------------------------------------------------------------
 # '.' (and ' ') are transparent.
 
@@ -48,6 +48,7 @@ PALETTE = {
     "l": (0x83, 0x76, 0x9C, 255),   # 13 indigo
     "m": (0xFF, 0x77, 0xA8, 255),   # 14 pink
     "f": (0xFF, 0xCC, 0xAA, 255),   # 15 peach
+    "h": (0xA8, 0xE7, 0x2E, 255),   # 138 light green (PICO-8 secret palette)
 }
 
 # Sprite canvas sizes, kept identical to game/Sprites.js. At 8 px/metre these
@@ -1430,7 +1431,7 @@ def _logo():
         for oy in range(-2, 3):
             if ox or oy:
                 draw_text(dst, wx + ox, wy + oy, word, "k", 3)
-    draw_text(dst, wx, wy, word, "g", 3)
+    draw_text(dst, wx, wy, word, "h", 3)
     # A shallow notch down from the top edge of the big M, leaving its
     # middle vertex bridging the towers just below — so it reads as an M.
     mx = wx + 4 * 3
@@ -1440,7 +1441,7 @@ def _logo():
     # word or its outline.
     for y in range(wy - 2, wy + 5 * 3 + 2):
         for x in range(wx - 2, wx + text_width(word, 3) + 2):
-            if dst[y][x] not in (".", "k", "g"):
+            if dst[y][x] not in (".", "k", "h"):
                 dst[y][x] = "k"
     return dst
 
