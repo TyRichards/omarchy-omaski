@@ -222,6 +222,17 @@ function playTick(s, ev) {
   Engine.setHeading(dn, 0);
   check('down picks you back up after a crash', !dn.crashed);
 
+  // Planted sideways at a standstill, stepUp climbs; in motion it refuses.
+  const up = Engine.createState();
+  Engine.setHeading(up, 3);
+  const y0 = up.y;
+  Engine.stepUp(up);
+  check('up steps the planted skier back up the hill', up.y < y0);
+  up.speed = 10;
+  const y1 = up.y;
+  Engine.stepUp(up);
+  check('no stepping while moving', up.y === y1);
+
   // But not instantly: the minimum sit has to be served first.
   const t = Engine.createState();
   Engine.crash(t, Sprites.CRASH_SIT, ev);

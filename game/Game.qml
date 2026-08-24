@@ -486,8 +486,14 @@ FocusScope {
     case Qt.Key_Space:
     case Qt.Key_Insert:
     case Qt.Key_X:
-      // Holding the key auto-repeats; one press is one hop.
-      if (!event.isAutoRepeat) Engine.jump(s, root.events)
+      // Planted sideways at a standstill, Up walks back UP the hill one
+      // stride at a time (auto-repeat keeps striding while held).
+      // In motion it stays the jump; one press is one hop.
+      if (Math.abs(s.heading) === 3 && s.speed < 0.5 && !s.airborne
+          && !s.crashed)
+        Engine.stepUp(s)
+      else if (!event.isAutoRepeat)
+        Engine.jump(s, root.events)
       break
 
     // --- absolute headings on the numpad --------------------------------

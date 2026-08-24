@@ -41,6 +41,9 @@ var MAX_HEADING = 3;
 // Metres moved per extra push past full sideways: the planted-skis scoot.
 var SCOOT_STEP = 0.5;
 
+// Metres climbed per Up press when planted sideways at a standstill.
+var STEP_UP = 0.7;
+
 // Target scalar speed in m/s per |heading|. Down, diagonal and traverse
 // all carry the same pace; skis fully sideways means a stop.
 var SPEED_BY_HEADING = [15.0, 15.0, 15.0, 0.0];
@@ -296,6 +299,8 @@ function createState() {
     // Input.
     fast: false,
     climbing: 0,        // -1 left, +1 right while side-stepping uphill
+    walkPhase: false,   // alternates the step/climb frames per Up press
+    walkTimer: 0,       // seconds left showing the walking sprite
 
     // Metres of slope visible above the skier; the view keeps this current
     // so the monster can enter from just off screen.
@@ -354,6 +359,7 @@ function step(state, dt, events) {
   if (state.jumpGrace > 0) state.jumpGrace -= dt;
   if (state.bumpCooldown > 0) state.bumpCooldown -= dt;
   if (state.bumpTimer > 0) state.bumpTimer -= dt;
+  if (state.walkTimer > 0) state.walkTimer -= dt;
 
   // --- movement ------------------------------------------------------------
   if (state.airborne) {
@@ -725,6 +731,22 @@ function turn(state, delta) {
   state.heading = next;
 }
 
+// One step back up the hill: only from a standstill with skis planted
+// fully sideways. Each press is one stride of the step/climb walk cycle.
+function stepUp(state) {
+  if (state.crashed) {
+    getUp(state);
+    return;
+  }
+  if (state.eaten || state.over || state.airborne) return;
+  if (Math.abs(state.heading) !== MAX_HEADING || state.speed > 0.5) return;
+  var dir = state.heading > 0 ? 1 : -1;
+  state.x = wrap(state.x + dir * STEP_UP * 0.4);
+  state.y = wrap(state.y - STEP_UP);
+  state.walkPhase = !state.walkPhase;
+  state.walkTimer = 0.3;
+}
+
 function setHeading(state, heading) {
   if (state.eaten || state.over || state.airborne) return;
   if (state.crashed) {
@@ -760,9 +782,12 @@ function skierSprite(state) {
 
   if (state.bumpTimer > 0) return [Sprites.SKIER_BUMP, false];
 
-  if (state.climbing !== 0) {
-    var walk = Math.floor(state.elapsed * 6) % 2 === 0;
-    if (state.climbing < 0)
+  if (state.climbing !== 0 || state.walkTimer > 0) {
+    var walk = state.climbing !== 0
+             ? Math.floor(state.elapsed * 6) % 2 === 0
+             : state.walkPhase;
+    var left = state.climbing !== 0 ? state.climbing < 0 : state.heading < 0;
+    if (left)
       return [walk ? Sprites.SKIER_STEP_L : Sprites.SKIER_CLIMB_L, false];
     return [walk ? Sprites.SKIER_STEP_R : Sprites.SKIER_CLIMB_R, false];
   }
