@@ -13,6 +13,8 @@ aspect ratio* layout would give it.
 
 No Wine. No browser. No emulator. No network. Just Quickshell and QML.
 
+![Omaski title screen](docs/preview.png)
+
 ```
 TIME 0:00:44.25
 DIST   551M
