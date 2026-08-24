@@ -41,9 +41,9 @@ var MAX_HEADING = 3;
 // Metres moved per extra push past full sideways: the planted-skis scoot.
 var SCOOT_STEP = 0.5;
 
-// Target scalar speed in m/s per |heading|. Straight down is fastest, and
-// skis fully sideways means a stop, exactly like the classic.
-var SPEED_BY_HEADING = [15.0, 13.7, 12.0, 0.0];
+// Target scalar speed in m/s per |heading|. Down, diagonal and traverse
+// all carry the same pace; skis fully sideways means a stop.
+var SPEED_BY_HEADING = [15.0, 15.0, 15.0, 0.0];
 
 // Unit direction of travel per |heading|: [sideways, downhill]. These give
 // the classic downhill components (15 / 12.5 / 8 / 0 m/s at full speed).
