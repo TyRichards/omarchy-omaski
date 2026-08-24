@@ -107,14 +107,22 @@ def validate(sid, art):
     return [list(l) for l in lines], None
 
 
+def game_rows(sid, rows):
+    """The rows as the game ships them: half-scale when the flag is on."""
+    if getattr(GEN, "HALF_SCALE", False) and sid not in GEN.FULL_SIZE_IDS:
+        return GEN.half(rows)
+    return rows
+
+
 def current_sizes():
     sizes = {}
     for sid in GEN.SIZES:
         rows = GEN.load_override(sid)
         if rows is None:
-            sizes[sid] = GEN.SIZES[sid]
-        else:
-            sizes[sid] = (len(rows[0]), len(rows))
+            w, h = GEN.SIZES[sid]
+            rows = [["."] * w for _ in range(h)]
+        rows = game_rows(sid, rows)
+        sizes[sid] = (len(rows[0]), len(rows))
     return sizes
 
 
@@ -183,11 +191,12 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(400, {"error": err})
                 return
             png = os.path.join(SPRITES_DIR, "%03d.png" % sid)
-            resized = png_size(png) != (len(rows[0]), len(rows))
+            shipped = game_rows(sid, rows)
+            resized = png_size(png) != (len(shipped[0]), len(shipped))
             os.makedirs(OVERRIDES, exist_ok=True)
             with open(override_path(sid), "w") as fh:
                 fh.write("\n".join("".join(r) for r in rows) + "\n")
-            GEN.write_png(png, rows)
+            GEN.write_png(png, shipped)
             if resized:
                 GEN.sync_sizes(current_sizes())
             refresh_game(respawn=resized)
@@ -203,7 +212,7 @@ class Handler(BaseHTTPRequestHandler):
             except FileNotFoundError:
                 pass
             png = os.path.join(SPRITES_DIR, "%03d.png" % sid)
-            rows = GEN.BUILDERS[sid]()
+            rows = game_rows(sid, GEN.BUILDERS[sid]())
             resized = png_size(png) != (len(rows[0]), len(rows))
             GEN.write_png(png, rows)
             if resized:

@@ -176,22 +176,24 @@ FocusScope {
     ctx.clearRect(0, F - 1, 1, 1)
     roundCorner(F, F, 12, -1, -1)
 
-    // Accent stripes across the top bezel, dot-matrix style — exactly as
-    // wide as the dark lip box holding the screen.
-    ctx.fillStyle = "#5F574F"
-    ctx.fillRect(root.bezel - 1, 4, root.screen + 2, 1)
-    ctx.fillRect(root.bezel - 1, 6, root.screen + 2, 1)
-
     // Inner lip: a 1px dark ring hugging the screen.
+    ctx.fillStyle = "#5F574F"
     var b = root.bezel
     ctx.fillRect(b - 1, b - 1, root.screen + 2, 1)
     ctx.fillRect(b - 1, b + root.screen, root.screen + 2, 1)
     ctx.fillRect(b - 1, b, 1, root.screen)
     ctx.fillRect(b + root.screen, b, 1, root.screen)
 
-    // The make on the bottom bezel, puny case, centred.
-    Font.draw(ctx, Math.round((F - Font.width("omarchy", 1)) / 2),
-              root.bezel + root.screen + 3, "omarchy", 1)
+    // The make on the bottom bezel, puny case, centred, with the double
+    // accent lines split to run alongside it left and right.
+    var tw = Font.width("omarchy", 1)
+    var tx = Math.round((F - tw) / 2)
+    var ty = root.bezel + root.screen + 3
+    Font.draw(ctx, tx, ty, "omarchy", 1)
+    ctx.fillRect(root.bezel - 1, ty + 1, tx - 3 - (root.bezel - 1), 1)
+    ctx.fillRect(root.bezel - 1, ty + 3, tx - 3 - (root.bezel - 1), 1)
+    ctx.fillRect(tx + tw + 3, ty + 1, F - (root.bezel - 1) - (tx + tw + 3), 1)
+    ctx.fillRect(tx + tw + 3, ty + 3, F - (root.bezel - 1) - (tx + tw + 3), 1)
   }
 
   // The canvas item spans the whole letterboxed square at its final size,
@@ -401,7 +403,7 @@ FocusScope {
       shortTime(s.elapsed),
       Math.floor(s.distance) + "M",
       Math.round(s.speed * 2.23694) + "MPH",
-      "RAD: " + Math.floor(s.style)
+      "RAD:  " + Math.floor(s.style)
     ]
     ctx.fillStyle = root.ink
     for (var j = 0; j < rows.length; j++) {
@@ -431,7 +433,7 @@ FocusScope {
     text(ctx, cx, 109, "F2 = RESTART  F3 = PAUSE")
     // Version in the puny lowercase font, lightest PICO-8 grey, tucked low.
     ctx.fillStyle = root.shadow
-    text(ctx, cx, 121, "version 5.5")
+    text(ctx, cx, 121, "version 5.6")
   }
 
   // ------------------------------------------------------------------------
