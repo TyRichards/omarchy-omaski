@@ -492,7 +492,7 @@ def _crash_burst():
     verts = []
     for i in range(18):
         a = i * math.pi / 9 + math.pi / 2      # one spike straight up
-        r = 13.5 if i % 2 == 0 else 8.0
+        r = 11.5 if i % 2 == 0 else 6.8
         verts.append((cx + math.cos(a) * r * 1.95, cy + math.sin(a) * r))
 
     def inside(px, py):

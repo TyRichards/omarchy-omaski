@@ -11,7 +11,7 @@ const SPRITE_DATA = {
   "009 skier_step_r": "..rr..\n..rf..\ndbbbbd\ndbbbbd\n..nnn.\n.nnnn.\nkkkkkk\nkkkkkk",
   "010 skier_climb_l": "..rr..\n..fr..\ndbbbbd\ndbbbbd\n.nnn..\n.nnn..\nkknkkk\n.kkkkk",
   "011 skier_climb_r": "..rr..\n..rf..\ndbbbbd\ndbbbbd\n..nnn.\n..nnn.\nkkknkk\nkkkkk.",
-  "012 crash_burst": "............................\n.........oo.....ooo.........\n.........oooo.ooooo.........\n.........oyoooooyyo.........\n...oooooooyyyyyyyyooooooo...\n....oooyyyyyyyyyyyyyyoo.....\n.....ooyyyyyyyyyyyyyyo......\n..oooooyyyyyyyyyyyyyyoooo...\n.oooooooyyyyyyyyyyyyoooooo..\n......ooyyyyyyyyyyyyo.......\n......ooyooooyyooooooo......\n.....ooooo.ooyoo.ooooo......\n.....o......oooo.....o......\n.............oo.............\n............................",
+  "012 crash_burst": "............................\n............................\n..........oo....oo..........\n.........ooooooooo..........\n....oooooooyooooyoooooo.....\n.....oooooyyyyyyyooooo......\n......ooyyyyyyyyyyyyo.......\n....ooooyyyyyyyyyyyyoooo....\n..oooooooyyyyyyyyyyoooooo...\n.......ooyyyyyyyyyoo........\n.......ooooooyooooooo.......\n.......o....oooo...oo.......\n.............oo.............\n............................\n............................",
   "013 crash_sit": "kk..r..kk\n.kkrrrkk.\n..kbfbk..\n.bbkbkbb.\ndbbbkbbbd\nd.kknkk.d\ndkkn.nkkd",
   "014 jump_v": "k..r..k\nkkrrrkk\nkbfffbk\n.bbbbb.\n..bbb..\n..nkn..\n..kkk..\n..kkk..\n.kk.kk.",
   "015 jump_high_l": ".......\nd.rr.dd\n.drfbd.\n.bbbb..\n.nnnn..\n.nnnn..\nkkkkkk.\n.......",
