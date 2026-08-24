@@ -1436,7 +1436,7 @@ def _logo():
     dst = canvas(120, 44)
     # A vaporwave sun rises in the valley between the peaks: yellow crown,
     # orange belly, red base, with the classic scanline gaps low down.
-    synth_sun(dst, 69, 9, 8)
+    synth_sun(dst, 68, 11, 8)
     mountain(dst, 53, 2, 30, cap=15)
     # The second peak's 45-degree base ends flush with the I (x = 94).
     mountain(dst, 79, 10, 15, cap=9)
