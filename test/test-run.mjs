@@ -91,8 +91,8 @@ function playTick(s, ev) {
     speeds.push(Engine.speedFor(s));
   }
   check('straight down is fastest', speeds[0] === Math.max(...speeds), speeds.join(' > '));
-  check('speed decreases as you turn',
-        speeds[0] > speeds[1] && speeds[1] > speeds[2] && speeds[2] > speeds[3]);
+  check('down, diagonal and traverse share one pace; sideways stops',
+        speeds[0] === speeds[1] && speeds[1] === speeds[2] && speeds[3] === 0);
 }
 
 // --- 4b. momentum: gradual build-up, dead stop at full sideways -------------
